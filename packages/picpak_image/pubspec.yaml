@@ -2,15 +2,18 @@ name: picpak_image
 description: "A new Flutter package project."
 version: 0.0.1
 homepage:
+publish_to: none
 
 environment:
-  sdk: ^3.12.0
+  sdk: ">=3.12.0 <4.0.0"
   flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
   image: ^4.0.0
+  picpak_core:
+    path: ../picpak_core
 
 dev_dependencies:
   flutter_test:

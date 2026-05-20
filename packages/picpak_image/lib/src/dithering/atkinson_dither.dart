@@ -1,4 +1,7 @@
 import 'package:image/image.dart' as img;
+import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_core/src/palette/protocol_palette.dart';
+import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import '../palette/palette_mapper.dart';
 import 'dither_algorithm.dart';
 
@@ -7,7 +10,7 @@ class AtkinsonDither implements DitherAlgorithm {
   String get name => "Atkinson";
 
   @override
-  img.Image apply(img.Image input) {
+  PaletteFramebuffer apply(img.Image input) {
     final width = input.width;
     final height = input.height;
 
@@ -25,7 +28,7 @@ class AtkinsonDither implements DitherAlgorithm {
       }
     }
 
-    final output = img.Image(width: width, height: height);
+    final output = PaletteFramebuffer(width: width, height: height, pixels: List.filled(width * height, PaletteIndex.black));
 
     for (int y=0; y<height; y++) {
       for (int x=0; x<width; x++) {
@@ -35,11 +38,15 @@ class AtkinsonDither implements DitherAlgorithm {
 
         final mapped = PaletteMapper.map(oldR, oldG, oldB);
 
-        output.setPixelRgb(x, y, mapped.r, mapped.g, mapped.b);
+        final paletteColour = ProtocolPalette.all.firstWhere(
+          (c) => c.index == mapped
+        );
 
-        final errR = (oldR - mapped.r) / 8.0;
-        final errG = (oldG - mapped.g) / 8.0;
-        final errB = (oldB - mapped.b) / 8.0;
+        output.setPixel(x, y, mapped);
+
+        final errR = (oldR - paletteColour.r) / 8.0;
+        final errG = (oldG - paletteColour.g) / 8.0;
+        final errB = (oldB - paletteColour.b) / 8.0;
 
         _distributed(r, g, b, x + 1, y,     errR, errG, errB, width, height);
         _distributed(r, g, b, x + 2, y,     errR, errG, errB, width, height);

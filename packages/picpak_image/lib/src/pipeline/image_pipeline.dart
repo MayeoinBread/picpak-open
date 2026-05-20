@@ -1,7 +1,15 @@
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
+import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_image/src/pipeline/framebuffer_preview_renderer.dart';
+import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
+import 'package:picpak_image/src/pipeline/pipeline_result.dart';
+import 'package:picpak_image/src/processing/image_adjustment_processor.dart';
+import 'package:picpak_image/src/processing/image_adjustments.dart';
+import 'package:picpak_image/src/processing/image_filter.dart';
+import 'package:picpak_image/src/processing/image_filter_processing.dart';
 import '../pipeline/fit_strategy.dart';
-import '../palette/palette_mapper.dart';
+import '../dithering/dither_mode.dart';
 import '../dithering/floyd_steinberg_dither.dart';
 import '../dithering/atkinson_dither.dart';
 
@@ -10,14 +18,17 @@ class ImagePipeline {
   final int targetHeight;
 
   const ImagePipeline({
-    this.targetWidth = 400,
-    this.targetHeight = 300
+    this.targetWidth = DeviceConstants.imageWidth,
+    this.targetHeight = DeviceConstants.imageHeight
   });
 
-  img.Image process(
+  PipelineResult process(
     Uint8List inputBytes, {
+    required ImageFilter filter,
+    required bool simulateDevice,
+    required ImageAdjustments adjustments,
     FitStrategy fit = FitStrategy.crop,
-    String dither = "fs",
+    DitherMode dither = DitherMode.floydSteinberg,
   }) {
     final decoded = img.decodeImage(inputBytes);
 
@@ -26,37 +37,27 @@ class ImagePipeline {
     }
 
     final resized = _resize(decoded, fit);
-    
-    final dithered = switch (dither) {
-      "atkinson" => AtkinsonDither().apply(resized),
-      _ => FloydSteinbergDither().apply(resized)
-    };
 
-    return dithered;
-  }
-
-  // TODO delete function unless we think we still need it
-  img.Image applyPalette(img.Image input) {
-    final output = img.Image(
-      width: input.width,
-      height: input.height
+    final filtered = ImageFilterProcessor.apply(
+      resized, filter
     );
 
-    for (int y=0; y < input.height; y++) {
-      for (int x=0; x<input.width; x++) {
-        final pixel = input.getPixel(x, y);
+    final adjusted = ImageAdjustmentProcessor.apply(filtered, adjustments);
+    
+    // TODO dithering engine rather than this
+    final PaletteFramebuffer framebuffer = switch(dither) {
+      DitherMode.atkinson => AtkinsonDither().apply(adjusted),
+      DitherMode.floydSteinberg => FloydSteinbergDither().apply(adjusted)
+    };
 
-        final r = pixel.r.toInt();
-        final g = pixel.g.toInt();
-        final b = pixel.b.toInt();
+    final preview = FramebufferPreviewRenderer.render(
+      framebuffer, simulateDevice: simulateDevice
+    );
 
-        final mapped = PaletteMapper.map(r, g, b);
-
-        output.setPixelRgb(x, y, mapped.r, mapped.g, mapped.b);
-      }
-    }
-
-    return output;
+    return PipelineResult(
+      framebuffer: framebuffer,
+      previewImage: preview
+    );
   }
 
   img.Image _resize(img.Image src, FitStrategy fit) {

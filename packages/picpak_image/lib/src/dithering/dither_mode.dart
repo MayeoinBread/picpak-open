@@ -1,0 +1,4 @@
+enum DitherMode {
+  floydSteinberg,
+  atkinson
+}

@@ -1,9 +1,24 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/pipeline/image_pipeline.dart';
 import 'package:picpak_image/src/pipeline/fit_strategy.dart';
+import 'package:picpak_image/src/encoding/framebuffer_packer.dart';
+import 'package:picpak_image/src/dithering/dither_mode.dart';
+import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
+import 'package:picpak_image/src/pipeline/pipeline_isolate.dart';
+import 'package:picpak_image/src/processing/image_adjustment_processor.dart';
+import 'package:picpak_image/src/processing/image_adjustments.dart';
 import 'package:image/image.dart' as img;
+import 'package:picpak_protocol/picpak_protocol.dart';
+
+// Bluetooth stuff
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'transport/ble_transport.dart';
 
 void main() {
   runApp(const PicPakApp());
@@ -33,7 +48,63 @@ class ImageComparePage extends StatefulWidget {
 class _ImageComparePageState extends State<ImageComparePage> {
   Uint8List? _originalImage;
   Uint8List? _processedImage;
-  final pipeline = const ImagePipeline();
+  final pipeline = ImagePipeline();
+
+  PaletteFramebuffer? _framebuffer;
+
+  // DitherMode? _ditherMode;
+  DitherMode _ditherMode = DitherMode.floydSteinberg;
+
+  ImageFilter _filter = ImageFilter.normal;
+  bool _simulateDevice = false;
+
+  final BleTransport _ble = BleTransport();
+  BluetoothDevice? _device;
+
+  int _processToken = 0;
+  bool _processing = false;
+
+  double _brightness = 0.0;
+  double _pendingBrightness = 0.0;
+  double _contrast = 1.0;
+  double _pendingContrast = 1.0;
+
+  Timer? _sliderTimer;
+
+  Future<void> _reprocess() async {
+    final image = _originalImage;
+    if (image == null) return;
+
+    final token = ++_processToken;
+
+    setState(() => _processing = true);
+
+    await Future.delayed(Duration.zero);
+
+    final result = await compute(
+      runPipelineIsolate,
+      PipelineRequest(
+        bytes: image,
+        filter: _filter,
+        simulateDevice: _simulateDevice,
+        width: 400,
+        height: 300,
+        fit: FitStrategy.crop,
+        dither: DitherMode.floydSteinberg,
+        adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast)
+      ),
+    );
+
+    if (token != _processToken) return;
+
+    setState(() {
+      _framebuffer = result.framebuffer;
+      _processedImage = Uint8List.fromList(
+        img.encodePng(result.previewImage),
+      );
+      _processing = false;
+    });
+  }
 
   Future<void> _pickImage() async {
     final result = await FilePicker.platform.pickFiles(
@@ -48,13 +119,37 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
     final processed = pipeline.process(
       bytes,
+      filter: _filter, simulateDevice: _simulateDevice,
+      adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast),
       fit: FitStrategy.crop,
-      dither: "atkinson"
+      dither: _ditherMode
     );
+
+    final packed = FramebufferPacker.pack(processed.framebuffer);
+    debugPrint("Packed bytes: ${packed.length}");
+
+    final packets = UploadSession.build(packedImageData: packed);
+    debugPrint("Packets: ${packets.length}");
+    debugPrint("First packet size: ${packets.first.bytes.length}");
 
     setState(() {
       _originalImage = bytes;
-      _processedImage = Uint8List.fromList(img.encodePng(processed));
+      _processedImage = Uint8List.fromList(img.encodePng(processed.previewImage));
+    });
+  }
+
+  Future<void> scanAndConnect() async {
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
+
+    FlutterBluePlus.scanResults.listen((results) async {
+      for (final r in results) {
+        if (r.advertisementData.serviceUuids.contains(ProtocolConstants.serviceUuid)) {
+          _device = r.device;
+          await FlutterBluePlus.stopScan();
+          setState(() {});
+          return;
+        }
+      }
     });
   }
 
@@ -64,29 +159,165 @@ class _ImageComparePageState extends State<ImageComparePage> {
       appBar: AppBar(
         title: const Text('PicPak Image Pipeline'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.folder_open),
-            onPressed: _pickImage,
-          )
         ]
       ),
-      body: Row(
+      body: Column(
         children: [
-          Expanded(
-            child: ImagePanel(
-              title: 'Original',
-              imageBytes: _originalImage
-            )
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Wrap(
+              spacing: 12, runSpacing: 12,
+              children: [
+                ElevatedButton(
+                  onPressed: _pickImage,
+                  child: const Text("Load Image")
+                ),
+
+                ElevatedButton(
+                  onPressed: scanAndConnect,
+                  child: Text( _device == null ? "Scan for Frame" : "Connected"),
+                ),
+                
+                DropdownButton<DitherMode>(
+                  value: _ditherMode,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() {
+                      _ditherMode = value;
+                    });
+
+                    if (_originalImage != null) {
+                      _reprocess();
+
+                      final packed = FramebufferPacker.pack(_framebuffer!);
+                      debugPrint("Packed bytes: ${packed.length}");
+                    }
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: DitherMode.floydSteinberg,
+                      child: Text("Floyd-Steinberg")
+                    ),
+                    DropdownMenuItem(
+                      value: DitherMode.atkinson,
+                      child: Text("Atkinson")
+                    )
+                  ],
+                ),
+
+                DropdownButton<ImageFilter>(
+                  value: _filter,
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() => _filter = v);
+                    _reprocess();
+                  },
+                  items: const [
+                    DropdownMenuItem(value: ImageFilter.normal, child: Text("Normal")),
+                    DropdownMenuItem(value: ImageFilter.vibrant, child: Text("Vibrant")),
+                    DropdownMenuItem(value: ImageFilter.grayscale, child: Text("Grayscale")),
+                    DropdownMenuItem(value: ImageFilter.highContrast, child: Text("High Contrast"))
+                  ]
+                ),
+
+                SwitchListTile(title: const Text("Simulate Device Colours"), value: _simulateDevice,
+                  onChanged: (v) {
+                    setState(() => _simulateDevice = v);
+                    _reprocess();
+                  }
+                ),
+
+                ElevatedButton(
+                  onPressed: () async {
+                    if (_device == null || _originalImage == null) {
+                      return;
+                    }
+                    _reprocess();
+                    
+                    final packed = FramebufferPacker.pack(_framebuffer!);
+                    final packets = UploadSession.build(packedImageData: packed);
+
+                    await _ble.sendImage(device: _device!, packets: packets, onProgress: (p) {
+                      debugPrint("Upload ${(p * 100).toStringAsFixed(1)}%");
+                    });
+
+                    await _ble.sendMd5Trigger(device: _device!, imageNumber: 1, imageData: packed);
+
+                    debugPrint("Upload compelte");
+                  },
+                  child: const Text("Send to Frame"),
+                ),
+
+                Slider(
+                  value: _brightness,
+                  divisions: 20,
+                  min: -1.0,
+                  max: 1.0,
+                  onChanged: (v) {
+                    setState(() {
+                      _brightness = v;
+                      _pendingBrightness = v;
+                    });
+                    _sliderTimer?.cancel();
+                    _sliderTimer = Timer(const Duration(milliseconds: 80), (){
+                      _reprocess();
+                    });
+                  },
+                ),
+
+                Slider(
+                  value: _contrast,
+                  divisions: 20,
+                  min: 0.0,
+                  max: 2.0,
+                  onChanged: (v) {
+                    setState(() {
+                      _contrast = v;
+                      _pendingContrast = v;
+                    });
+                    _sliderTimer?.cancel();
+                    _sliderTimer = Timer(const Duration(milliseconds: 80), (){
+                      _reprocess();
+                    });
+                  },
+                )
+              ],
+            ),
           ),
-          const VerticalDivider(width: 1),
-          Expanded(
-            child: ImagePanel(
-              title: "Processed (placeholder)",
-              imageBytes: _processedImage
-            )
+
+          Expanded(child: Row(
+            children: [
+              Expanded(
+                child: ImagePanel(
+                  title: 'Original',
+                  imageBytes: _originalImage
+                )
+              ),
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: Stack(
+                  children: [
+                    ImagePanel(
+                      title: "Processed",
+                      imageBytes: _processedImage,
+                    ),
+
+                    if (_processing)
+                      Positioned.fill(
+                        child: Container(
+                          color: const Color(0x88000000),
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ]),
           )
-        ]
-      )
+        ],
+      ),
     );
   }
 }
