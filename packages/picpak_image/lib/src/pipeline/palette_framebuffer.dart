@@ -1,10 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:picpak_core/picpak_core.dart';
 
 class PaletteFramebuffer {
   final int width;
   final int height;
 
-  final List<PaletteIndex> pixels;
+  final Uint8List pixels;
 
   PaletteFramebuffer({
     required this.width,
@@ -13,10 +15,11 @@ class PaletteFramebuffer {
   });
 
   PaletteIndex getPixel(int x, int y) {
-    return pixels[y * width + x];
+    // return pixels[y * width + x];
+    return PaletteIndex.values[pixels[y * width + x]];
   }
 
   void setPixel(int x, int y, PaletteIndex value) {
-    pixels[y * width + x] = value;
+    pixels[y * width + x] = value.index;
   }
 }

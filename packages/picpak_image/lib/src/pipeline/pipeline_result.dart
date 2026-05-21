@@ -1,12 +1,13 @@
-import 'package:image/image.dart' as img;
+import 'dart:typed_data';
+
 import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 
 class PipelineResult {
   final PaletteFramebuffer framebuffer;
-  final img.Image previewImage;
+  final Uint8List previewBytes;
 
   PipelineResult({
     required this.framebuffer,
-    required this.previewImage
+    required this.previewBytes
   });
 }

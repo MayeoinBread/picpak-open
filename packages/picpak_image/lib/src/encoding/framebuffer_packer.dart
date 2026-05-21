@@ -15,13 +15,11 @@ class FramebufferPacker {
       for (int j=0; j<4; j++) {
         final pixelIndex = i + j;
 
-        PaletteIndex pixel = PaletteIndex.black;
+        int value = 0;
 
         if (pixelIndex < totalPixels) {
-          pixel = fb.pixels[pixelIndex];
+          value = fb.pixels[pixelIndex];
         }
-
-        final value = _paletteToBits(pixel);
 
         byte |= (value << (6 - (j * 2)));
       }
@@ -30,18 +28,5 @@ class FramebufferPacker {
     }
 
     return output.toBytes();
-  }
-
-  static int _paletteToBits(PaletteIndex index) {
-    switch (index) {
-      case PaletteIndex.black:
-        return 0;
-      case PaletteIndex.white:
-        return 1;
-      case PaletteIndex.yellow:
-        return 2;
-      case PaletteIndex.red:
-        return 3;
-    }
   }
 }

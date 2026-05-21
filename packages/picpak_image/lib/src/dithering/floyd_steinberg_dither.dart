@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
 import '../palette/palette_mapper.dart';
@@ -28,7 +30,7 @@ class FloydSteinbergDither implements DitherAlgorithm {
       }
     }
 
-    final output = PaletteFramebuffer(width: width, height: height, pixels: List.filled(width * height, PaletteIndex.black));
+    final output = PaletteFramebuffer(width: width, height: height, pixels: Uint8List(width * height));
 
     for (int y=0; y<height; y++) {
       for (int x=0; x<width; x++) {

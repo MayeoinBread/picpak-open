@@ -23,20 +23,14 @@ class ImagePipeline {
   });
 
   PipelineResult process(
-    Uint8List inputBytes, {
+    img.Image workingImage, {
     required ImageFilter filter,
     required bool simulateDevice,
     required ImageAdjustments adjustments,
     FitStrategy fit = FitStrategy.crop,
     DitherMode dither = DitherMode.floydSteinberg,
   }) {
-    final decoded = img.decodeImage(inputBytes);
-
-    if (decoded == null) {
-      throw Exception('Failed to decode image');
-    }
-
-    final resized = _resize(decoded, fit);
+    final resized = workingImage;
 
     final filtered = ImageFilterProcessor.apply(
       resized, filter
@@ -54,13 +48,17 @@ class ImagePipeline {
       framebuffer, simulateDevice: simulateDevice
     );
 
+    final previewBytes = Uint8List.fromList(
+      img.encodePng(preview)
+    );
+
     return PipelineResult(
       framebuffer: framebuffer,
-      previewImage: preview
+      previewBytes: previewBytes
     );
   }
 
-  img.Image _resize(img.Image src, FitStrategy fit) {
+  img.Image prepareBaseImage(img.Image src, FitStrategy fit) {
     switch(fit) {
       case FitStrategy.scale:
         return img.copyResize(

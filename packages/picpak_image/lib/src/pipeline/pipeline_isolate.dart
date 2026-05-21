@@ -16,7 +16,7 @@ PipelineResult runPipelineIsolate(dynamic data) {
   );
 
   return pipeline.process(
-    req.bytes,
+    req.workingImage,
     filter: req.filter,
     simulateDevice: req.simulateDevice,
     adjustments: req.adjustments,
@@ -26,7 +26,7 @@ PipelineResult runPipelineIsolate(dynamic data) {
 }
 
 class PipelineRequest {
-  final Uint8List bytes;
+  final img.Image workingImage;
   final ImageFilter filter;
   final bool simulateDevice;
   final int width;
@@ -36,7 +36,7 @@ class PipelineRequest {
   final ImageAdjustments adjustments;
 
   PipelineRequest({
-    required this.bytes,
+    required this.workingImage,
     required this.filter,
     required this.simulateDevice,
     required this.width,

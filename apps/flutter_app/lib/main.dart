@@ -46,6 +46,7 @@ class ImageComparePage extends StatefulWidget {
 }
 
 class _ImageComparePageState extends State<ImageComparePage> {
+  img.Image? _workingImage;
   Uint8List? _originalImage;
   Uint8List? _processedImage;
   final pipeline = ImagePipeline();
@@ -71,6 +72,23 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
   Timer? _sliderTimer;
 
+  Future<void> _prepareWorkingImage() async {
+    final bytes = _originalImage;
+    if (bytes == null) return;
+
+    final decoded = img.decodeImage(bytes);
+
+    if (decoded == null) return;
+
+    final pipeline = ImagePipeline();
+
+    final prepared = pipeline.prepareBaseImage(decoded, FitStrategy.crop);
+
+    setState(() {
+      _workingImage = prepared;
+    });
+  }
+
   Future<void> _reprocess() async {
     final image = _originalImage;
     if (image == null) return;
@@ -84,7 +102,7 @@ class _ImageComparePageState extends State<ImageComparePage> {
     final result = await compute(
       runPipelineIsolate,
       PipelineRequest(
-        bytes: image,
+        workingImage: _workingImage!,
         filter: _filter,
         simulateDevice: _simulateDevice,
         width: 400,
@@ -99,9 +117,7 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
     setState(() {
       _framebuffer = result.framebuffer;
-      _processedImage = Uint8List.fromList(
-        img.encodePng(result.previewImage),
-      );
+      _processedImage = result.previewBytes;
       _processing = false;
     });
   }
@@ -117,25 +133,22 @@ class _ImageComparePageState extends State<ImageComparePage> {
     final bytes = result.files.first.bytes;
     if (bytes == null) return;
 
-    final processed = pipeline.process(
-      bytes,
-      filter: _filter, simulateDevice: _simulateDevice,
-      adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast),
-      fit: FitStrategy.crop,
-      dither: _ditherMode
-    );
+    setState(() {
+      _originalImage = bytes;
+    });
 
-    final packed = FramebufferPacker.pack(processed.framebuffer);
+    await _prepareWorkingImage();
+
+    await _reprocess();
+
+    if (_framebuffer == null) return;
+
+    final packed = FramebufferPacker.pack(_framebuffer!);
     debugPrint("Packed bytes: ${packed.length}");
 
     final packets = UploadSession.build(packedImageData: packed);
     debugPrint("Packets: ${packets.length}");
     debugPrint("First packet size: ${packets.first.bytes.length}");
-
-    setState(() {
-      _originalImage = bytes;
-      _processedImage = Uint8List.fromList(img.encodePng(processed.previewImage));
-    });
   }
 
   Future<void> scanAndConnect() async {
@@ -256,13 +269,11 @@ class _ImageComparePageState extends State<ImageComparePage> {
                   onChanged: (v) {
                     setState(() {
                       _brightness = v;
-                      _pendingBrightness = v;
-                    });
-                    _sliderTimer?.cancel();
-                    _sliderTimer = Timer(const Duration(milliseconds: 80), (){
-                      _reprocess();
                     });
                   },
+                  onChangeEnd: (_) {
+                    _reprocess();
+                  }
                 ),
 
                 Slider(
@@ -273,12 +284,10 @@ class _ImageComparePageState extends State<ImageComparePage> {
                   onChanged: (v) {
                     setState(() {
                       _contrast = v;
-                      _pendingContrast = v;
                     });
-                    _sliderTimer?.cancel();
-                    _sliderTimer = Timer(const Duration(milliseconds: 80), (){
-                      _reprocess();
-                    });
+                  },
+                  onChangeEnd: (_) {
+                    _reprocess();
                   },
                 )
               ],
