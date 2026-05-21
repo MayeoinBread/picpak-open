@@ -1,0 +1,108 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "flutter_app",
+            "cwd": "apps\\flutter_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "flutter_app (profile mode)",
+            "cwd": "apps\\flutter_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "flutter_app (release mode)",
+            "cwd": "apps\\flutter_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "picpak_domain",
+            "cwd": "packages\\picpak_domain",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "picpak_domain (profile mode)",
+            "cwd": "packages\\picpak_domain",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "picpak_domain (release mode)",
+            "cwd": "packages\\picpak_domain",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "picpak_image",
+            "cwd": "packages\\picpak_image",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "picpak_image (profile mode)",
+            "cwd": "packages\\picpak_image",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "picpak_image (release mode)",
+            "cwd": "packages\\picpak_image",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "picpak_protocol",
+            "cwd": "packages\\picpak_protocol",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "picpak_protocol (profile mode)",
+            "cwd": "packages\\picpak_protocol",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "picpak_protocol (release mode)",
+            "cwd": "packages\\picpak_protocol",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        },
+        {
+            "name": "picpak_storage",
+            "cwd": "packages\\picpak_storage",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "picpak_storage (profile mode)",
+            "cwd": "packages\\picpak_storage",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "picpak_storage (release mode)",
+            "cwd": "packages\\picpak_storage",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
