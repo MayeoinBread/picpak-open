@@ -8,6 +8,8 @@ import '../pipeline/palette_framebuffer.dart';
 import 'dither_engine.dart';
 
 class SierraDither implements DitherEngine {
+  String get name => "Sierra Lite";
+
   @override
   PaletteFramebuffer apply(img.Image image) {
     final working = img.Image.from(image);

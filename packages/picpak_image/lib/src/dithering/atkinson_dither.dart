@@ -7,7 +7,6 @@ import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import '../palette/palette_mapper.dart';
 
 class AtkinsonDither implements DitherEngine {
-  @override
   String get name => "Atkinson";
 
   @override

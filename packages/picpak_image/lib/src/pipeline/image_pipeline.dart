@@ -2,9 +2,7 @@ import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/src/dithering/dither_register.dart';
-import 'package:picpak_image/src/dithering/no_dither.dart';
 import 'package:picpak_image/src/pipeline/framebuffer_preview_renderer.dart';
-import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import 'package:picpak_image/src/pipeline/pipeline_result.dart';
 import 'package:picpak_image/src/processing/image_adjustment_processor.dart';
 import 'package:picpak_image/src/processing/image_adjustments.dart';
@@ -12,8 +10,6 @@ import 'package:picpak_image/src/processing/image_filter.dart';
 import 'package:picpak_image/src/processing/image_filter_processing.dart';
 import '../pipeline/fit_strategy.dart';
 import '../dithering/dither_mode.dart';
-import '../dithering/floyd_steinberg_dither.dart';
-import '../dithering/atkinson_dither.dart';
 
 class ImagePipeline {
   final int targetWidth;

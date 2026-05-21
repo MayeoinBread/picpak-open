@@ -1,13 +1,15 @@
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
-import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/src/dithering/dither_engine.dart';
 
 import '../palette/palette_mapper.dart';
 import '../pipeline/palette_framebuffer.dart';
 
 class NoDither implements DitherEngine {
+  String get name => "None";
+  
+  @override
   PaletteFramebuffer apply(img.Image image) {
     final output = PaletteFramebuffer(
       width: image.width,

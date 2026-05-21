@@ -7,7 +7,6 @@ import '../palette/palette_mapper.dart';
 import '../pipeline/palette_framebuffer.dart';
 
 class FloydSteinbergDither implements DitherEngine {
-  @override
   String get name => "Floyd-Steinberg";
 
   @override

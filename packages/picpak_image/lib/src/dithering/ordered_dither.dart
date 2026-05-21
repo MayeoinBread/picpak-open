@@ -1,13 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
-import 'package:picpak_core/picpak_core.dart';
 
 import '../palette/palette_mapper.dart';
 import '../pipeline/palette_framebuffer.dart';
 import 'dither_engine.dart';
 
 class OrderedDither implements DitherEngine {
+  String get name => "Ordered";
+
   static const matrix = [
     [0, 8, 2, 10],
     [12, 4, 14, 6],

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 
 class FramebufferPacker {

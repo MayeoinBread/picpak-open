@@ -11,7 +11,6 @@ import 'package:picpak_image/src/encoding/framebuffer_packer.dart';
 import 'package:picpak_image/src/dithering/dither_mode.dart';
 import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import 'package:picpak_image/src/pipeline/pipeline_isolate.dart';
-import 'package:picpak_image/src/processing/image_adjustment_processor.dart';
 import 'package:picpak_image/src/processing/image_adjustments.dart';
 import 'package:image/image.dart' as img;
 import 'package:picpak_protocol/picpak_protocol.dart';
