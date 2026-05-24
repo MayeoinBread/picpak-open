@@ -1,0 +1,179 @@
+import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_app/transport/ble_session.dart';
+import 'package:flutter_app/transport/device_info.dart';
+import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
+import 'package:picpak_protocol/picpak_protocol.dart';
+
+class BleManager {
+  final BleSession session = BleSession();
+  BluetoothCharacteristic? ff01;  // frameBuffer
+  BluetoothCharacteristic? ff02;
+
+  StreamSubscription? _ff01Sub;
+  StreamSubscription? _ff02Sub;
+
+  Future<BluetoothDevice?> _resolveDevice(BluetoothDevice scanDevice) async {
+    final devices = FlutterBluePlusWindows.connectedDevices;
+
+    try { 
+      return devices.firstWhere(
+        (d) => d.remoteId == scanDevice.remoteId
+      );
+    } catch (_) {
+      return scanDevice;
+    }
+  }
+
+  Future<void> initChannels(BluetoothDevice device) async {
+    final services = await device.discoverServices();
+
+    for (final s in services) {
+      if (s.uuid.toString().toLowerCase().contains("ff00")) {
+        for (final c in s.characteristics) {
+          final id = c.uuid.toString().toLowerCase();
+
+          if (id == "ff01") ff01 = c;
+          if (id == "ff02") ff02 = c;
+        }
+      }
+    }
+
+    if (ff01 == null || ff02 == null) {
+      throw Exception("Missing ff01/ff02 characteristic");
+    }
+  }
+
+  Future<void> connect(BluetoothDevice scanDevice) async {
+    final device = await _resolveDevice(scanDevice);
+
+    if (device == null) throw Exception("Can't resolve scanDevice");
+
+    await FlutterBluePlus.stopScan();
+
+    // Always use THIS instance from now on
+    session.device = device;
+
+    await device.connect(autoConnect: false);
+    
+    await initChannels(device);
+
+    await ff01!.setNotifyValue(true);
+    await ff02!.setNotifyValue(true);
+
+    _ff01Sub = ff01!.lastValueStream.listen(_handleBleData);
+    _ff02Sub = ff02!.lastValueStream.listen(_handleBleData);
+  }
+
+  void _handleBleData(List<int> data) {
+    if (data.length < 3) return;
+
+    if (data.first != 0xAA) return;
+    if (data.last != 0xFF) return;
+    
+    final opcode = data[1];
+    
+    switch (opcode) {
+      case 0x02:
+        debugPrint("Image Data: $data");
+        break;
+      case 0x08:
+        _parseDeviceInfo(data);
+        break;
+      case 0x31:
+        debugPrint("Slot list: $data");
+        break;
+      case 0x33:
+        debugPrint("Delete ACK: $data");
+    }
+  }
+
+  Future<void> sendImage(List<ProtocolPacket> packets) async {
+    const int chunkFlush = 20;
+    final char = ff01;
+
+    if (char == null) {
+      throw Exception("No active BLE session");
+    }
+
+    for (int i=0; i<packets.length; i++){
+      await char.write(packets[i].bytes, withoutResponse: false);
+      await Future.delayed(const Duration(milliseconds: 3));
+    }
+  }
+
+  Future<void> sendMd5Trigger({
+    required int imageNumber,
+    required Uint8List imageData}) async {
+      final char = ff01;
+
+      if (char == null) {
+        throw Exception("No active BLE session");
+      }
+
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      final packet = Md5Packet.create(imageNumber: imageNumber, imageData: imageData);
+      await char.write(packet.bytes, withoutResponse: false);
+
+      await Future.delayed(const Duration(milliseconds: 30));
+  }
+
+  Future<void> requestDeviceInfo() async {
+    await ff02!.write([0xAA, 0x08, 0x02, 0xFF]);
+  }
+
+  Future<void> imageList() async {
+    await ff01!.write([0xAA, 0x30, 0xFF]);
+  }
+
+  Future<void> deleteImage(int slotNumber) async {
+    final lo = slotNumber & 0xFF;
+    final hi = (slotNumber >> 8) & 0xFF;
+
+    await ff01!.write([0xAA, 0x32, lo, hi, 0xFF]);
+  }
+
+  Future<void> getImageInSlot(int slotNumber) async {
+    final lo = slotNumber & 0xFF;
+    final hi = (slotNumber >> 8) & 0xFF;
+
+    await ff01!.write([0xAA, 0x03, lo, hi, 0xFF]);
+  }
+
+  void _parseDeviceInfo(List<int> data) {
+    if (data.length < 10) return;
+
+    final battery = data[2];
+    final flag = data[3];
+
+    String readString(int start, int length) {
+      final bytes = data
+        .sublist(start, start + length)
+        .takeWhile((b) => b != 0x00)
+        .toList();
+      return String.fromCharCodes(bytes);
+    }
+
+    final hardware = readString(5, 10);
+    final firmware = readString(15, 10);
+    final serial = readString(25, 10);
+
+    final deviceInfo = DeviceInfo(
+      battery: battery,
+      hardware: hardware,
+      firmware: firmware,
+      serial: serial,
+      flag: flag
+    );
+
+    debugPrint("Battery: $battery%");
+    debugPrint("Flag: 0x${flag.toRadixString(16)}");
+    debugPrint("Hardware: $hardware");
+    debugPrint("Firmware: $firmware");
+    debugPrint("Serial: $serial");
+  }
+}

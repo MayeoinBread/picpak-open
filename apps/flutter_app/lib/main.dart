@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/transport/ble_manager.dart';
 import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/pipeline/image_pipeline.dart';
@@ -16,8 +17,8 @@ import 'package:image/image.dart' as img;
 import 'package:picpak_protocol/picpak_protocol.dart';
 
 // Bluetooth stuff
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'transport/ble_transport.dart';
+// import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
 
 void main() {
   runApp(const PicPakApp());
@@ -61,8 +62,7 @@ class _ImageComparePageState extends State<ImageComparePage> {
   ImageFilter _filter = ImageFilter.normal;
   bool _simulateDevice = false;
 
-  final BleTransport _ble = BleTransport();
-  BluetoothDevice? _device;
+  final BleManager _ble = BleManager();
 
   int _processToken = 0;
   bool _processing = false;
@@ -135,7 +135,8 @@ class _ImageComparePageState extends State<ImageComparePage> {
     debugPrint("Packed bytes: ${packed.length}");
 
     final packets = UploadSession.build(
-      packedImageData: packed
+      packedImageData: packed,
+      imageNumber: 1
     );
 
     debugPrint("Packets: ${packets.length}");
@@ -185,18 +186,25 @@ class _ImageComparePageState extends State<ImageComparePage> {
   }
 
   Future<void> scanAndConnect() async {
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-
-    FlutterBluePlus.scanResults.listen((results) async {
-      for (final r in results) {
-        if (r.advertisementData.serviceUuids.contains(ProtocolConstants.serviceUuid)) {
-          _device = r.device;
-          await FlutterBluePlus.stopScan();
-          setState(() {});
-          return;
+    final device = await FlutterBluePlusWindows.startScan(timeout: const Duration(seconds: 5)).then((_) async {
+      BluetoothDevice? found;
+      final sub = FlutterBluePlusWindows.scanResults.listen((results) {
+        for (final r in results) {
+          if (r.device.platformName.toLowerCase().contains("picpak")) {
+            found = r.device;
+            break;
+          }
         }
-      }
+      });
+
+      await Future.delayed(const Duration(seconds: 5));
+      await sub.cancel();
+      return found;
     });
+
+    if (device == null) return;
+    await _ble.connect(device);
+    setState(() {});
   }
 
   @override
@@ -221,7 +229,14 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
                 ElevatedButton(
                   onPressed: scanAndConnect,
-                  child: Text( _device == null ? "Scan for Frame" : "Connected"),
+                  child: Text(_ble.session.isConnected ? "Connected" : "Scan for Frame"),
+                ),
+
+                ElevatedButton(
+                  // onPressed: () => _ble.deleteImage(3),
+                  // child: Text("Delete Image 3")
+                  onPressed: () => _ble.getImageInSlot(2),
+                  child: Text("Read image 2")
                 ),
 
                 DropdownButton<SwatchType>(
@@ -303,19 +318,17 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
                 ElevatedButton(
                   onPressed: () async {
-                    if (_device == null || _originalImage == null) {
+                    if (!_ble.session.isConnected || _originalImage == null) {
                       return;
                     }
                     _reprocess();
-                    
-                    final packed = FramebufferPacker.pack(_framebuffer!);
-                    final packets = UploadSession.build(packedImageData: packed);
+                    final flipped = flipVertical(_framebuffer!);
+                    final packed = FramebufferPacker.pack(flipped);
+                    final packets = UploadSession.build(imageNumber: 3, packedImageData: packed);
 
-                    await _ble.sendImage(device: _device!, packets: packets, onProgress: (p) {
-                      debugPrint("Upload ${(p * 100).toStringAsFixed(1)}%");
-                    });
+                    await _ble.sendImage(packets);
 
-                    await _ble.sendMd5Trigger(device: _device!, imageNumber: 1, imageData: packed);
+                    await _ble.sendMd5Trigger(imageNumber: 3, imageData: packed);
 
                     debugPrint("Upload compelte");
                   },

@@ -14,17 +14,19 @@ class DataPacket {
     packet.addByte(0xAA);
     packet.addByte(0x01);
 
+    // image id
     packet.addByte(imageNumber & 0xFF);
     packet.addByte((imageNumber >> 8) & 0xFF);
 
+    // packet index
     packet.addByte(packetIndex & 0xFF);
 
+    // is last
     packet.addByte(isLast ? 0x01 : 0x00);
 
-    final length = chunk.length;
-
-    packet.addByte(length & 0xFF);
-    packet.addByte((length >> 8) & 0xFF);
+    // payload length
+    packet.addByte(chunk.length & 0xFF);
+    packet.addByte((chunk.length >> 8) & 0xFF);
 
     packet.add(chunk);
 

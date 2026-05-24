@@ -9,7 +9,7 @@ import 'chunking.dart';
 class UploadSession {
   static List<ProtocolPacket> build({
     required Uint8List packedImageData,
-    int imageNumber = 1
+    required int imageNumber
   }) {
     final packets = <ProtocolPacket>[];
 
@@ -24,9 +24,9 @@ class UploadSession {
       ));
     }
 
-    packets.add(
-      Md5Packet.create(imageNumber: imageNumber, imageData: packedImageData)
-    );
+    // packets.add(
+    //   Md5Packet.create(imageNumber: imageNumber, imageData: packedImageData)
+    // );
 
     return packets;
   }

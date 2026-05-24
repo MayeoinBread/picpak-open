@@ -16,11 +16,14 @@ class Md5Packet {
     packet.addByte(0xAA);
     packet.addByte(0x04);
 
+    // image id
     packet.addByte(imageNumber & 0xFF);
     packet.addByte((imageNumber >> 8) & 0xFF);
 
+    // protocol flag
     packet.addByte(0x00);
 
+    // md5 bytes
     packet.add(digest.bytes);
 
     packet.addByte(0xFF);
