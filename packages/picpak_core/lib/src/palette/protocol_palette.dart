@@ -46,4 +46,19 @@ class ProtocolPalette {
   static const all = [
     black, white, yellow, red
   ];
+
+  static ProtocolPaletteColour paletteFromIndex(int i) {
+    switch(i) {
+      case 0:
+        return ProtocolPalette.black;
+      case 1:
+        return ProtocolPalette.white;
+      case 2:
+        return ProtocolPalette.yellow;
+      case 3:
+        return ProtocolPalette.red;
+      default:
+        return ProtocolPalette.black;
+    }
+  }
 }

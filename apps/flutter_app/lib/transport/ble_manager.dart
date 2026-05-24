@@ -2,10 +2,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_app/transport/ble_session.dart';
 import 'package:flutter_app/transport/device_info.dart';
 import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
+import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
+import 'package:picpak_image/src/encoding/framebuffer_decoder.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';
 
 class BleManager {
@@ -15,6 +16,10 @@ class BleManager {
 
   StreamSubscription? _ff01Sub;
   StreamSubscription? _ff02Sub;
+
+  ImageReadSession? _readSession;
+
+  Function(PaletteFramebuffer frameBuffer)? onImageDownloaded;
 
   Future<BluetoothDevice?> _resolveDevice(BluetoothDevice scanDevice) async {
     final devices = FlutterBluePlusWindows.connectedDevices;
@@ -78,7 +83,8 @@ class BleManager {
     
     switch (opcode) {
       case 0x02:
-        debugPrint("Image Data: $data");
+        // debugPrint("Image Data: $data");
+        _handleReadPacket(data);
         break;
       case 0x08:
         _parseDeviceInfo(data);
@@ -92,7 +98,6 @@ class BleManager {
   }
 
   Future<void> sendImage(List<ProtocolPacket> packets) async {
-    const int chunkFlush = 20;
     final char = ff01;
 
     if (char == null) {
@@ -138,14 +143,16 @@ class BleManager {
   }
 
   Future<void> getImageInSlot(int slotNumber) async {
+    _readSession = ImageReadSession();
+
     final lo = slotNumber & 0xFF;
     final hi = (slotNumber >> 8) & 0xFF;
 
     await ff01!.write([0xAA, 0x03, lo, hi, 0xFF]);
   }
 
-  void _parseDeviceInfo(List<int> data) {
-    if (data.length < 10) return;
+  DeviceInfo? _parseDeviceInfo(List<int> data) {
+    if (data.length < 10) return null;
 
     final battery = data[2];
     final flag = data[3];
@@ -175,5 +182,43 @@ class BleManager {
     debugPrint("Hardware: $hardware");
     debugPrint("Firmware: $firmware");
     debugPrint("Serial: $serial");
+
+    return deviceInfo;
   }
+
+  void _handleReadPacket(List<int> data) {
+    final packetIndex = data[4];
+    final isLast = data[5] == 0x01;
+    final length = data[6] | (data[7] << 8);
+
+    final payload = Uint8List.fromList(data.sublist(8, 8 + length));
+
+    _readSession?.packets[packetIndex] = payload;
+
+    if (isLast) {
+      final sortedKeys = _readSession!.packets.keys.toList()..sort();
+
+      final builder = BytesBuilder();
+
+      for (final key in sortedKeys) {
+        builder.add(_readSession!.packets[key]!);
+      }
+
+      final framebufferBytes = builder.toBytes();
+
+      debugPrint(framebufferBytes.length.toString());
+
+      final framebuffer = FramebufferDecoder.decode(framebufferBytes);
+      
+      onImageDownloaded?.call(framebuffer);
+
+      _readSession!.complete = true;
+    }
+  }
+}
+
+class ImageReadSession {
+  final Map<int, Uint8List> packets = {};
+
+  bool complete = false;
 }

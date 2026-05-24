@@ -28,6 +28,6 @@ class Md5Packet {
 
     packet.addByte(0xFF);
 
-    return ProtocolPacket(packet.toBytes());
+    return ProtocolPacket(idx: imageNumber, bytes: packet.toBytes());
   }
 }

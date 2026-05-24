@@ -49,6 +49,7 @@ class _ImageComparePageState extends State<ImageComparePage> {
   img.Image? _workingImage;
   Uint8List? _originalImage;
   Uint8List? _processedImage;
+  Uint8List? _deviceImageBytes;
   final pipeline = ImagePipeline();
 
   PaletteFramebuffer? _framebuffer;
@@ -69,6 +70,24 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
   double _brightness = 0.0;
   double _contrast = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    debugPrint("UI BLE INSTANCE: ${identityHashCode(_ble)}");
+
+    _ble.onImageDownloaded = (fb) {
+      debugPrint(fb.pixels.length.toString());
+      // TODO move the img.encode into the renderFrameBuffer?
+      final previewBytes = Uint8List.fromList(
+        img.encodePng(PanelRerender.renderFramebuffer(fb))
+      );
+      setState(() {
+        _deviceImageBytes = previewBytes;
+      });
+    };
+  }
 
   Future<void> _prepareWorkingImage() async {
     final bytes = _originalImage;
@@ -103,8 +122,8 @@ class _ImageComparePageState extends State<ImageComparePage> {
         workingImage: _workingImage!,
         filter: _filter,
         simulateDevice: _simulateDevice,
-        width: 400,
-        height: 300,
+        width: DeviceConstants.imageWidth,
+        height: DeviceConstants.imageHeight,
         fit: _fitStrategy,
         dither: _ditherMode,
         adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast)
@@ -233,10 +252,8 @@ class _ImageComparePageState extends State<ImageComparePage> {
                 ),
 
                 ElevatedButton(
-                  // onPressed: () => _ble.deleteImage(3),
-                  // child: Text("Delete Image 3")
-                  onPressed: () => _ble.getImageInSlot(2),
-                  child: Text("Read image 2")
+                  onPressed: () => _ble.getImageInSlot(1),
+                  child: Text("Read image 1")
                 ),
 
                 DropdownButton<SwatchType>(
@@ -266,9 +283,6 @@ class _ImageComparePageState extends State<ImageComparePage> {
 
                     if (_originalImage != null) {
                       _reprocess();
-
-                      final packed = FramebufferPacker.pack(_framebuffer!);
-                      debugPrint("Packed bytes: ${packed.length}");
                     }
                   },
                   items: DitherMode.values.map((t) {
@@ -423,6 +437,12 @@ class _ImageComparePageState extends State<ImageComparePage> {
                   ],
                 ),
               ),
+              Expanded(
+                child: ImagePanel(
+                  title: "Device (raw download)",
+                  imageBytes: _deviceImageBytes,
+                )
+              )
             ]),
           )
         ],
