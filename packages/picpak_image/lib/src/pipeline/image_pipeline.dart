@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/dithering/dither_register.dart';
 import 'package:picpak_image/src/pipeline/framebuffer_preview_renderer.dart';
 import 'package:picpak_image/src/pipeline/pipeline_result.dart';
 import 'package:picpak_image/src/processing/image_adjustment_processor.dart';
-import 'package:picpak_image/src/processing/image_adjustments.dart';
 import 'package:picpak_image/src/processing/image_filter.dart';
 import 'package:picpak_image/src/processing/image_filter_processing.dart';
 import '../pipeline/fit_strategy.dart';
@@ -79,6 +79,8 @@ class ImagePipeline {
         }
 
         return img.copyResize(cropped, width: targetWidth, height: targetHeight);
+      case _:
+        return src;
     }
   }
 }

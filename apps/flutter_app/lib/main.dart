@@ -1,450 +1,50 @@
-import 'dart:async';
-import 'dart:typed_data';
-import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:picpak_core/picpak_core.dart';
-import 'package:picpak_image/picpak_image.dart';
-import 'package:picpak_image/src/pipeline/image_pipeline.dart';
-import 'package:picpak_image/src/pipeline/fit_strategy.dart';
-import 'package:picpak_image/src/encoding/framebuffer_packer.dart';
-import 'package:picpak_image/src/dithering/dither_mode.dart';
-import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
-import 'package:picpak_image/src/pipeline/pipeline_isolate.dart';
-import 'package:picpak_image/src/processing/image_adjustments.dart';
-import 'package:image/image.dart' as img;
-import 'package:picpak_protocol/picpak_protocol.dart';
 
-// Bluetooth stuff
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
-import 'transport/ble_transport.dart';
+import 'app/app_shell.dart';
 
 void main() {
   runApp(const PicPakApp());
 }
 
-class PicPakApp extends StatelessWidget {
+class PicPakApp extends StatefulWidget {
   const PicPakApp({super.key});
+
+  @override
+  State<PicPakApp> createState() => _PicPakAppState();
+}
+
+class _PicPakAppState extends State<PicPakApp> {
+  ThemeMode themeMode = ThemeMode.dark;
+
+  void toggleTheme() {
+    setState(() {
+      themeMode = themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'PicPak Open',
-      debugShowCheckedModeBanner: true,
-      theme: ThemeData.dark(),
-      home: const ImageComparePage(),
-    );
-  }
-}
+      debugShowCheckedModeBanner: false,
+      
+      themeMode: themeMode,
 
-class ImageComparePage extends StatefulWidget {
-  const ImageComparePage({super.key});
-
-  @override
-  State<ImageComparePage> createState() => _ImageComparePageState();
-}
-
-class _ImageComparePageState extends State<ImageComparePage> {
-  img.Image? _workingImage;
-  Uint8List? _originalImage;
-  Uint8List? _processedImage;
-  final pipeline = ImagePipeline();
-
-  PaletteFramebuffer? _framebuffer;
-
-  DitherMode _ditherMode = DitherMode.floydSteinberg;
-  FitStrategy _fitStrategy = FitStrategy.crop;
-  SwatchType _swatchType = SwatchType.noise;
-
-  final _noteController = TextEditingController();
-
-  ImageFilter _filter = ImageFilter.normal;
-  bool _simulateDevice = false;
-
-  final BleTransport _ble = BleTransport();
-  BluetoothDevice? _device;
-
-  int _processToken = 0;
-  bool _processing = false;
-
-  double _brightness = 0.0;
-  double _contrast = 1.0;
-
-  Future<void> _prepareWorkingImage() async {
-    final bytes = _originalImage;
-    if (bytes == null) return;
-
-    final decoded = img.decodeImage(bytes);
-
-    if (decoded == null) return;
-
-    final pipeline = ImagePipeline();
-
-    final prepared = pipeline.prepareBaseImage(decoded, _fitStrategy);
-
-    setState(() {
-      _workingImage = prepared;
-    });
-  }
-
-  Future<void> _reprocess() async {
-    final image = _originalImage;
-    if (image == null) return;
-
-    final token = ++_processToken;
-
-    setState(() => _processing = true);
-
-    await Future.delayed(Duration.zero);
-
-    final result = await compute(
-      runPipelineIsolate,
-      PipelineRequest(
-        workingImage: _workingImage!,
-        filter: _filter,
-        simulateDevice: _simulateDevice,
-        width: 400,
-        height: 300,
-        fit: _fitStrategy,
-        dither: _ditherMode,
-        adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast)
+      theme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.light,
+        colorSchemeSeed: Color.fromARGB(255, 255, 127, 0)
       ),
-    );
 
-    if (token != _processToken) return;
-
-    setState(() {
-      _framebuffer = result.framebuffer;
-      _processedImage = result.previewBytes;
-      _processing = false;
-    });
-  }
-
-  Future<void> _loadImageBytes(Uint8List bytes) async {
-    setState(() {
-      _originalImage = bytes;
-    });
-
-    await _prepareWorkingImage();
-    await _reprocess();
-
-    if (_framebuffer == null) return;
-
-    final packed = FramebufferPacker.pack(_framebuffer!);
-
-    debugPrint("Packed bytes: ${packed.length}");
-
-    final packets = UploadSession.build(
-      packedImageData: packed
-    );
-
-    debugPrint("Packets: ${packets.length}");
-    debugPrint("First packet size: ${packets.first.bytes.length}");
-  }
-
-  Future<void> _pickImage() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.image,
-      withData: true,
-    );
-
-    if (result == null || result.files.isEmpty) return;
-
-    final bytes = result.files.first.bytes;
-    
-    if (bytes == null) return;
-
-    await _loadImageBytes(bytes);
-  }
-
-  Future<void> _loadSwatch() async {
-    final swatch = SwatchGenerator.generate(
-      _swatchType,
-      width: DeviceConstants.imageWidth,
-      height: DeviceConstants.imageHeight
-    );
-    final bytes = Uint8List.fromList(
-      img.encodePng(swatch)
-    );
-
-    await _loadImageBytes(bytes);
-  }
-
-  Future<void> _generateNote() async {
-    final note = NoteRenderer.render(
-      text: _noteController.text,
-      w: DeviceConstants.imageWidth,
-      h: DeviceConstants.imageHeight
-    );
-
-    final bytes = Uint8List.fromList(
-      img.encodePng(note)
-    );
-
-    await _loadImageBytes(bytes);
-  }
-
-  Future<void> scanAndConnect() async {
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-
-    FlutterBluePlus.scanResults.listen((results) async {
-      for (final r in results) {
-        if (r.advertisementData.serviceUuids.contains(ProtocolConstants.serviceUuid)) {
-          _device = r.device;
-          await FlutterBluePlus.stopScan();
-          setState(() {});
-          return;
-        }
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('PicPak Image Pipeline'),
-        actions: [
-        ]
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        brightness: Brightness.dark,
+        colorSchemeSeed: Color.fromARGB(255, 0, 127, 255)
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Wrap(
-              spacing: 12, runSpacing: 12,
-              children: [
-                ElevatedButton(
-                  onPressed: _pickImage,
-                  child: const Text("Load Image")
-                ),
 
-                ElevatedButton(
-                  onPressed: scanAndConnect,
-                  child: Text( _device == null ? "Scan for Frame" : "Connected"),
-                ),
-
-                DropdownButton<SwatchType>(
-                  value: _swatchType,
-                  onChanged: (value) async {
-                    if (value == null) return;
-                    setState(() {
-                      _swatchType = value;
-                    });
-                    await _loadSwatch();
-                  },
-                  items: SwatchType.values.map((t) {
-                    return DropdownMenuItem(
-                      value: t,
-                      child: Text(t.name)
-                    );
-                  }).toList()
-                ),
-                
-                DropdownButton<DitherMode>(
-                  value: _ditherMode,
-                  onChanged: (value) {
-                    if (value == null) return;
-                    setState(() {
-                      _ditherMode = value;
-                    });
-
-                    if (_originalImage != null) {
-                      _reprocess();
-
-                      final packed = FramebufferPacker.pack(_framebuffer!);
-                      debugPrint("Packed bytes: ${packed.length}");
-                    }
-                  },
-                  items: DitherMode.values.map((t) {
-                    return DropdownMenuItem(
-                      value: t,
-                      child: Text(t.name)
-                    );
-                  }).toList()
-                ),
-
-                DropdownButton<FitStrategy>(
-                  value: _fitStrategy,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() => _fitStrategy = v);
-                    _reprocess();
-                  },
-                  items: FitStrategy.values.map((t) {
-                    return DropdownMenuItem(
-                      value: t,
-                      child: Text(t.name)
-                    );
-                  }).toList()
-                ),
-
-                DropdownButton<ImageFilter>(
-                  value: _filter,
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setState(() => _filter = v);
-                    _reprocess();
-                  },
-                  items: ImageFilter.values.map((t) {
-                    return DropdownMenuItem(
-                      value: t,
-                      child: Text(t.name)
-                    );
-                  }).toList()
-                ),
-
-                SwitchListTile(title: const Text("Simulate Device Colours"), value: _simulateDevice,
-                  onChanged: (v) {
-                    setState(() => _simulateDevice = v);
-                    _reprocess();
-                  }
-                ),
-
-                ElevatedButton(
-                  onPressed: () async {
-                    if (_device == null || _originalImage == null) {
-                      return;
-                    }
-                    _reprocess();
-                    
-                    final packed = FramebufferPacker.pack(_framebuffer!);
-                    final packets = UploadSession.build(packedImageData: packed);
-
-                    await _ble.sendImage(device: _device!, packets: packets, onProgress: (p) {
-                      debugPrint("Upload ${(p * 100).toStringAsFixed(1)}%");
-                    });
-
-                    await _ble.sendMd5Trigger(device: _device!, imageNumber: 1, imageData: packed);
-
-                    debugPrint("Upload compelte");
-                  },
-                  child: const Text("Send to Frame"),
-                ),
-
-                ElevatedButton(
-                  onPressed: _generateNote,
-                  child: const Text("Generate Note")
-                ),
-
-                TextField(
-                  controller: _noteController,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: "Note Text",
-                    border: OutlineInputBorder()
-                  ),
-                ),
-
-                Column (
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Brightness"),
-                    Slider(
-                      value: _brightness,
-                      divisions: 20,
-                      min: -1.0,
-                      max: 1.0,
-                      onChanged: (v) {
-                        setState(() {
-                          _brightness = v;
-                        });
-                      },
-                      onChangeEnd: (_) {
-                        _reprocess();
-                      }
-                    )
-                  ]
-                ),
-
-                Column (
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text("Contrast"),
-                    Slider(
-                      value: _contrast,
-                      divisions: 20,
-                      min: 0.0,
-                      max: 2.0,
-                      onChanged: (v) {
-                        setState(() {
-                          _contrast = v;
-                        });
-                      },
-                      onChangeEnd: (_) {
-                        _reprocess();
-                      },
-                    )
-                  ]
-                ),
-              ],
-            ),
-          ),
-
-          Expanded(child: Row(
-            children: [
-              Expanded(
-                child: ImagePanel(
-                  title: 'Original',
-                  imageBytes: _originalImage
-                )
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: Stack(
-                  children: [
-                    ImagePanel(
-                      title: "Processed",
-                      imageBytes: _processedImage,
-                    ),
-
-                    if (_processing)
-                      Positioned.fill(
-                        child: Container(
-                          color: const Color(0x88000000),
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ]),
-          )
-        ],
-      ),
-    );
-  }
-}
-
-class ImagePanel extends StatelessWidget {
-  final String title;
-  final Uint8List? imageBytes;
-
-  const ImagePanel({
-    super.key,
-    required this.title,
-    required this.imageBytes
-  });
-
-  @override
-  Widget build(BuildContext context){
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          child: Text(title)
-        ),
-        const Divider(height: 1),
-        Expanded(
-          child: Center(
-            child: imageBytes == null
-              ? const Text("No image loaded")
-              : Image.memory(imageBytes!)
-          )
-        )
-      ],
+      home: AppShell(
+        onToggleTheme: toggleTheme
+      )
     );
   }
 }

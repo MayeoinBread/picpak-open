@@ -22,4 +22,8 @@ class PaletteFramebuffer {
   void setPixel(int x, int y, PaletteIndex value) {
     pixels[y * width + x] = value.index;
   }
+
+  static PaletteFramebuffer empty() {
+    return PaletteFramebuffer(width: 400, height: 300, pixels: Uint8List(300*400));
+  }
 }

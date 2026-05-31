@@ -1,5 +1,5 @@
 import 'package:image/image.dart' as img;
-import 'image_adjustments.dart';
+import 'package:picpak_image/picpak_image.dart';
 
 class ImageAdjustmentProcessor {
   static img.Image apply(img.Image src, ImageAdjustments adj) {

@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:picpak_protocol/src/packets/data_packet.dart';
-import 'package:picpak_protocol/src/packets/md5_packet.dart';
 import 'package:picpak_protocol/src/packets/protocol_packet.dart';
 
 import 'chunking.dart';
@@ -9,7 +8,7 @@ import 'chunking.dart';
 class UploadSession {
   static List<ProtocolPacket> build({
     required Uint8List packedImageData,
-    int imageNumber = 1
+    required int imageNumber
   }) {
     final packets = <ProtocolPacket>[];
 
@@ -23,10 +22,6 @@ class UploadSession {
         chunk: chunks[i]
       ));
     }
-
-    packets.add(
-      Md5Packet.create(imageNumber: imageNumber, imageData: packedImageData)
-    );
 
     return packets;
   }
