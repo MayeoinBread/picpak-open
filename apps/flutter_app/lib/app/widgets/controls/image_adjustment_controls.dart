@@ -25,32 +25,89 @@ class ImageAdjustmentControls extends StatelessWidget {
 
             // BRIGHTNESS
             Text('Brightness', style: Theme.of(context).textTheme.titleMedium),
-            ExcludeSemantics(
-              child: Slider(
-                value: adjustments.brightness,
-                min: -1.0,
-                max: 1.0,
-                onChanged: (value) {
-                  onChanged(adjustments.copyWith(brightness: value));
-                }
-              )
+
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: () {
+                    final v = (adjustments.brightness - 0.1).clamp(-1.0, 1.0);
+                    onChanged(adjustments.copyWith(brightness: v));
+                  },
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(adjustments.brightness.toStringAsFixed(2))
+                  )
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    final v = (adjustments.brightness + 0.1).clamp(-1.0, 1.0);
+                    onChanged(adjustments.copyWith(brightness: v));
+                  },
+                )
+              ]
             ),
-            Text(adjustments.brightness.toStringAsFixed(2)),
+
+            // ExcludeSemantics(
+            //   child: Slider(
+            //     value: adjustments.brightness,
+            //     min: -1.0,
+            //     max: 1.0,
+            //     onChanged: (value) {
+            //       // onChanged(adjustments.copyWith(brightness: value));
+            //     },
+            //     onChangeEnd: (value) {
+            //       onChanged(adjustments.copyWith(brightness: value));
+            //     },
+            //   )
+            // ),
+            // Text(adjustments.brightness.toStringAsFixed(2)),
+
+
             const SizedBox(height: 24),
 
             // CONTRAST
             Text('Contrast', style: Theme.of(context).textTheme.titleMedium),
-            ExcludeSemantics(
-              child: Slider(
-                value: adjustments.contrast,
-                min: 0.0,
-                max: 2.0,
-                onChanged: (value) {
-                  onChanged(adjustments.copyWith(contrast: value));
-                },
-              )
-            ),
-            Text(adjustments.contrast.toStringAsFixed(2))
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: () {
+                    final v = (adjustments.contrast - 0.1).clamp(0.0, 2.0);
+                    onChanged(adjustments.copyWith(contrast: v));
+                  },
+                ),
+                Expanded(
+                  child: Center(
+                    child: Text(adjustments.contrast.toStringAsFixed(2))
+                  )
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    final v = (adjustments.contrast + 0.1).clamp(0.0, 2.0);
+                    onChanged(adjustments.copyWith(contrast: v));
+                  },
+                )
+              ]
+            )
+            
+            // ExcludeSemantics(
+            //   child: Slider(
+            //     value: adjustments.contrast,
+            //     min: 0.0,
+            //     max: 2.0,
+            //     onChanged: (value) {
+            //       // onChanged(adjustments.copyWith(contrast: value));
+            //     },
+            //     onChangeEnd: (value) {
+            //       onChanged(adjustments.copyWith(contrast: value));
+            //     },
+            //   )
+            // ),
+            // Text(adjustments.contrast.toStringAsFixed(2))
           ]
         )
       )

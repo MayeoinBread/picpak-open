@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_app/app/services/dashboard_actions.dart';
 import 'package:flutter_app/app/state/device_session_state.dart';
 import 'package:flutter_app/app/widgets/common/image_preview_panel.dart';
-import 'package:flutter_app/app/widgets/common/stable_image_panel.dart';
 import 'package:flutter_app/app/widgets/common/status_bar.dart';
 import 'package:flutter_app/app/widgets/controls/dithering_controls.dart';
 import 'package:flutter_app/app/widgets/controls/image_adjustment_controls.dart';
@@ -22,7 +20,6 @@ import 'package:picpak_image/src/pipeline/image_pipeline.dart';
 import 'package:picpak_image/src/pipeline/pipeline_isolate.dart';
 import 'package:picpak_image/src/encoding/framebuffer_packer.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';
-import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/pipeline/fit_strategy.dart';
 
 class DashboardPage extends StatefulWidget {
@@ -170,7 +167,9 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() {
       if (!listEquals(_originalImageBytes, bytes)) {
         _originalImageBytes = bytes;
-        _previewImage = MemoryImage(bytes);
+        _previewImage = MemoryImage(
+          Uint8List.fromList(bytes)
+        );
       }
     });
 
@@ -269,11 +268,9 @@ class _DashboardPageState extends State<DashboardPage> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        // ImagePreviewPanel(title: 'Original', height: DeviceConstants.imageHeight, imageBytes: _originalImageBytes),
-                        StableImagePanel(image: _previewImage),
+                        ImagePreviewPanel(title: 'Original', height: DeviceConstants.imageHeight, imageBytes: _originalImageBytes),
                         const SizedBox(height: 16),
-                        // ImagePreviewPanel(title: 'Preview', height: DeviceConstants.imageHeight, imageBytes: _deviceImageBytes)
-                        StableImagePanel(image: _previewImage),
+                        ImagePreviewPanel(title: 'Preview', height: DeviceConstants.imageHeight, imageBytes: _deviceImageBytes)
                       ]
                     )
                   )
