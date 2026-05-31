@@ -45,7 +45,7 @@ class DeviceSessionState {
   bool get canDisconnect => isConnected && isIdle;
   bool get canTransfer => isConnected && isIdle;
   bool get hasSelectedSlot => activeSlot != null;
-  bool get canDownload => canTransfer && activeSlot != null;
+  bool get canDownload => hasSelectedSlot && canTransfer && hasImageInSlot(activeSlot!);
 
   String get statusText {
     switch (connection) {
@@ -65,6 +65,12 @@ class DeviceSessionState {
             return 'Downloading slot $activeSlot';
         }
     }
+  }
+
+  bool hasImageInSlot(int slot) {
+    return slot >= 0 &&
+      slot < availableSlots.length &&
+      availableSlots.contains(slot);
   }
 
   DeviceSessionState copyWith({

@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
 import 'package:flutter_app/app/services/dashboard_actions.dart';
+import 'package:flutter_app/app/services/image_pipeline_controller.dart';
 import 'package:flutter_app/app/state/device_session_state.dart';
 import 'package:flutter_app/app/widgets/common/image_preview_panel.dart';
 import 'package:flutter_app/app/widgets/common/status_bar.dart';
@@ -16,8 +17,6 @@ import 'package:flutter_app/transport/ble_manager.dart';
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/picpak_image.dart';
-import 'package:picpak_image/src/pipeline/image_pipeline.dart';
-import 'package:picpak_image/src/pipeline/pipeline_isolate.dart';
 import 'package:picpak_image/src/encoding/framebuffer_packer.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';
 import 'package:picpak_image/src/pipeline/fit_strategy.dart';
@@ -40,15 +39,12 @@ class _DashboardPageState extends State<DashboardPage> {
   ImageFilter _filter = ImageFilter.normal;
   bool _simulateDeviceScreen = false;
 
-  ImageProvider? _previewImage;
-
-  img.Image? _sourceImage;
+  final ImagePipelineController pipeline = ImagePipelineController();
   Uint8List? _originalImageBytes;
-  PaletteFramebuffer? _processedFramebuffer;
-  Uint8List? _deviceImageBytes;
 
   bool _processing = false;
-  int _processToken = 0;
+
+  DateTime _lastProgressUpdate = DateTime.fromMillisecondsSinceEpoch(0);
 
   final BleManager ble = BleManager();
 
@@ -61,11 +57,14 @@ class _DashboardPageState extends State<DashboardPage> {
     super.initState();
 
     ble.onImageDownloaded = (framebuffer) {
-      final previewBytes = Uint8List.fromList(
+      pipeline.framebuffer = framebuffer;
+
+      pipeline.previewBytes = Uint8List.fromList(
         img.encodePng(PanelRerender.renderFramebuffer(framebuffer))
       );
+
+
       setState(() {
-        _deviceImageBytes = previewBytes;
         session = session.copyWith(
           transfer: TransferState.idle,
           progress: 0,
@@ -95,13 +94,6 @@ class _DashboardPageState extends State<DashboardPage> {
       });
     };
 
-    ble.uploadProgress.addListener(() {
-      updateSession((s) => s.copyWith(
-        transfer: TransferState.uploading,
-        progress: ble.uploadProgress.value
-      ));
-    });
-
     ble.onUploadComplete = () {
       setState(() {
         session = session.copyWith(
@@ -116,49 +108,24 @@ class _DashboardPageState extends State<DashboardPage> {
     final bytes = _originalImageBytes;
     if (bytes == null) return;
 
-    final decoded = img.decodeImage(bytes);
-
-    if (decoded == null) return;
-
-    final pipeline = ImagePipeline();
-
-    final prepared = pipeline.prepareBaseImage(decoded, _fitStrategy);
-
-    setState(() {
-      _sourceImage = prepared;
-    });
+    await pipeline.prepare(bytes, _fitStrategy);
   }
 
   Future<void> _reprocess() async {
-    if (_processing) return;
-    final image = _sourceImage;
-    if (image == null) return;
-
-    final token = ++_processToken;
+    final bytes = _originalImageBytes;
+    if (bytes == null) return;
 
     setState(() => _processing = true);
 
-    await Future.delayed(Duration.zero);
-
-    final result = await compute(
-      runPipelineIsolate,
-      PipelineRequest(
-        workingImage: _sourceImage!,
-        filter: _filter,
-        simulateDevice: _simulateDeviceScreen,
-        width: DeviceConstants.imageWidth,
-        height: DeviceConstants.imageHeight,
-        fit: _fitStrategy,
-        dither: algorithm,
-        adjustments: ImageAdjustments(brightness: adjustments.brightness, contrast: adjustments.contrast)
-      ),
+    await pipeline.process(
+      dither: algorithm,
+      filter: _filter,
+      simulateDevice: _simulateDeviceScreen,
+      fit: _fitStrategy,
+      adjustments: adjustments
     );
 
-    if (token != _processToken) return;
-
     setState(() {
-      _processedFramebuffer = result.framebuffer;
-      _deviceImageBytes = result.previewBytes;
       _processing = false;
     });
   }
@@ -167,9 +134,6 @@ class _DashboardPageState extends State<DashboardPage> {
     setState(() {
       if (!listEquals(_originalImageBytes, bytes)) {
         _originalImageBytes = bytes;
-        _previewImage = MemoryImage(
-          Uint8List.fromList(bytes)
-        );
       }
     });
 
@@ -193,24 +157,20 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Future<void> _uploadImage() async {
-    debugPrint("Active slot: ${session.activeSlot}");
-    await _reprocess();
+    final fb = pipeline.framebuffer;
+    if (fb == null) return;
 
-    final fb = _processedFramebuffer;
-    if (fb == null) {
-      debugPrint("framebuffer is null");
-      return;
-    }
+    setState(() {
+      session = session.copyWith(
+        transfer: TransferState.uploading,
+        progress: 0
+      );
+    });
 
     final flipped = flipVertical(fb);
     final packed = FramebufferPacker.pack(flipped);
 
-    debugPrint("packed bytes: ${packed.length}");
-
     final packets = UploadSession.build(imageNumber: session.activeSlot!, packedImageData: packed);
-
-    debugPrint("Packets: ${packets.length}");
-    debugPrint("First packet size: ${packets.first.bytes.length}");
 
     await ble.sendImage(packets);
     await ble.sendMd5Trigger(imageNumber: session.activeSlot!, imageData: packed);
@@ -268,9 +228,17 @@ class _DashboardPageState extends State<DashboardPage> {
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       children: [
-                        ImagePreviewPanel(title: 'Original', height: DeviceConstants.imageHeight, imageBytes: _originalImageBytes),
+                        ImagePreviewPanel(
+                          title: 'Original',
+                          height: DeviceConstants.imageHeight,
+                          imageBytes: _originalImageBytes
+                        ),
                         const SizedBox(height: 16),
-                        ImagePreviewPanel(title: 'Preview', height: DeviceConstants.imageHeight, imageBytes: _deviceImageBytes)
+                        ImagePreviewPanel(
+                          title: 'Preview',
+                          height: DeviceConstants.imageHeight,
+                          imageBytes: pipeline.previewBytes
+                        )
                       ]
                     )
                   )
@@ -349,7 +317,15 @@ class _DashboardPageState extends State<DashboardPage> {
             )
           ),
           // STATUS BAR
-          StatusBar(state: session)
+          ValueListenableBuilder<double>(
+            valueListenable: ble.uploadProgress,
+            builder: (context, value, _) {
+              return StatusBar(
+                state: session,
+                progressListenable: ble.uploadProgress,
+              );
+            }
+          )
         ],
       )
     );

@@ -18,7 +18,7 @@ class ImagePreviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -26,7 +26,7 @@ class ImagePreviewPanel extends StatelessWidget {
               title,
               style: Theme.of(context).textTheme.titleLarge
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             SizedBox(
               height: height.toDouble(),
               child: Center(

@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/state/device_session_state.dart';
 
 class StatusBar extends StatelessWidget {
   final DeviceSessionState state;
+  final ValueListenable<double> progressListenable;
 
   const StatusBar({
     super.key,
-    required this.state
+    required this.state,
+    required this.progressListenable
   });
 
   @override
@@ -49,21 +52,25 @@ class StatusBar extends StatelessWidget {
           const SizedBox(width: 16),
           // Transfer state
           Text(
-            'Transfer State: ${state.transfer.name.toUpperCase()}',
+            'Transfer State: ${state.transfer.name.toUpperCase()}', // ${(progressListenable.value * 100).toStringAsFixed(0)}%',
             style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)
           ),
           const SizedBox(width: 16),
-          // Progress (only meaningful during transfer)
           SizedBox(
             width: 120,
-            child: LinearProgressIndicator(
-              value: state.transfer == TransferState.idle
-                ? 0
-                : state.progress
+            child: ValueListenableBuilder<double>(
+              valueListenable: progressListenable,
+              builder: (context, progress, _) {
+                final safeProgress = state.transfer == TransferState.uploading
+                  ? progress
+                  : 0.0;
+                
+                return LinearProgressIndicator(value: safeProgress);
+              }
             )
           ),
           if (state.transfer == TransferState.uploading)
-            Text('${(state.progress * 100).toStringAsFixed(0)}%')
+            Text('${(progressListenable.value * 100).toStringAsFixed(0)}%')
         ]
       )
     );

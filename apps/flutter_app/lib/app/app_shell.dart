@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/pages/crash_test_page.dart';
 
 import 'pages/dashboard_page.dart';
 import 'pages/dev_workbench_page.dart';
@@ -24,7 +23,6 @@ class _AppShellState extends State<AppShell> {
     final pages = [
       DashboardPage(),
       DevWorkbenchPage()
-      // CrashTestPage()
     ];
 
     return Scaffold(

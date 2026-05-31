@@ -162,7 +162,7 @@ class BleManager {
     uploadProgress.value = 0.0;
 
     for (int i=0; i<packets.length; i++){
-      debugPrint("Sending packet $i");
+      // debugPrint("Sending packet $i");
       try {
         await char.write(packets[i].bytes, withoutResponse: false);
       } catch (e, st) {
@@ -170,9 +170,10 @@ class BleManager {
         debugPrintStack(stackTrace: st);
         rethrow;
       }
-      // final progress = (i + 1) / packets.length;
-      
-      // uploadProgress.value = progress;
+      final progress = (i + 1) / packets.length;
+      uploadProgress.value = progress;
+
+      // debugPrint("Upload percentage: $progress%");
       
       await Future.delayed(const Duration(milliseconds: 3));
     }
@@ -194,7 +195,7 @@ class BleManager {
 
       await Future.delayed(const Duration(milliseconds: 30));
 
-      uploadProgress.value = 1.0;
+      uploadProgress.value = 0.0;
       onUploadComplete?.call();
   }
 
