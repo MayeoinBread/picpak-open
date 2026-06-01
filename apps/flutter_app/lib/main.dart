@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_app/app/services/ble_service.dart';
 
 import 'app/app_shell.dart';
 
 void main() {
+  final ble = BleService.instance;
+
+  ble.manager.uploadProgress.addListener(() {
+    ble.uploadProgress.value = ble.manager.uploadProgress.value;
+  });
+
   runApp(const PicPakApp());
 }
 

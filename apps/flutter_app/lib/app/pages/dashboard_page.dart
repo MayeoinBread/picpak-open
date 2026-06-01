@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:flutter_app/app/services/ble_service.dart';
 import 'package:flutter_app/app/services/dashboard_actions.dart';
+import 'package:flutter_app/app/services/device_session_service.dart';
 import 'package:flutter_app/app/services/image_pipeline_controller.dart';
 import 'package:flutter_app/app/state/device_session_state.dart';
 import 'package:flutter_app/app/widgets/common/image_preview_panel.dart';
@@ -13,7 +15,6 @@ import 'package:flutter_app/app/widgets/controls/image_adjustment_controls.dart'
 import 'package:flutter_app/app/widgets/controls/processing_options_panel.dart';
 import 'package:flutter_app/app/widgets/device/device_actions_panel.dart';
 import 'package:flutter_app/app/widgets/device/device_info_card.dart';
-import 'package:flutter_app/transport/ble_manager.dart';
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/picpak_image.dart';
@@ -33,7 +34,8 @@ class _DashboardPageState extends State<DashboardPage> {
   DitherMode algorithm = DitherMode.atkinson;
   ImageAdjustments adjustments = ImageAdjustments(brightness: 0.0, contrast: 1.0);
 
-  DeviceSessionState session = DeviceSessionState(connection: ConnectionState.disconnected, transfer: TransferState.idle, progress: 0.0, deviceName: 'Not Connected', batteryPercent: 0, firmware: '-', availableSlots: const []);
+  // DeviceSessionState session = DeviceSessionState(connection: ConnectionState.disconnected, transfer: TransferState.idle, progress: 0.0, deviceName: 'Not Connected', batteryPercent: 0, firmware: '-', availableSlots: const []);
+  final session = DeviceSessionService.instance;
 
   FitStrategy _fitStrategy = FitStrategy.crop;
   ImageFilter _filter = ImageFilter.normal;
@@ -46,10 +48,12 @@ class _DashboardPageState extends State<DashboardPage> {
 
   DateTime _lastProgressUpdate = DateTime.fromMillisecondsSinceEpoch(0);
 
-  final BleManager ble = BleManager();
+  final ble = BleService.instance.manager;
+
+  late final void Function(PaletteFramebuffer) _imageListener;
 
   void updateSession(DeviceSessionState Function(DeviceSessionState current) updater) {
-    setState(() { session = updater(session);});
+    setState(() { session.state = updater(session.state);});
   }
 
   @override
@@ -65,7 +69,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
 
       setState(() {
-        session = session.copyWith(
+        session.state = session.state.copyWith(
           transfer: TransferState.idle,
           progress: 0,
           activeSlot: null
@@ -75,7 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
     ble.onDeviceInfo = (info) {
       setState(() {
-        session = session.copyWith(
+        session.state = session.state.copyWith(
           batteryPercent: info.battery,
           firmware: info.firmware
         );
@@ -83,10 +87,10 @@ class _DashboardPageState extends State<DashboardPage> {
     };
 
     ble.onSlotList = (slots) {
-      final safeActive = session.activeSlot;
+      final safeActive = session.state.activeSlot;
 
       setState(() {
-        session = session.copyWith(
+        session.state = session.state.copyWith(
           availableSlots: slots,
           // activeSlot: slots.isNotEmpty ? slots.first : null
           activeSlot: slots.contains(safeActive) ? safeActive : (slots.isNotEmpty ? slots.first : null)
@@ -96,12 +100,37 @@ class _DashboardPageState extends State<DashboardPage> {
 
     ble.onUploadComplete = () {
       setState(() {
-        session = session.copyWith(
+        session.state = session.state.copyWith(
           transfer: TransferState.idle,
           progress: 0
         );
       });
     };
+
+    _imageListener = (fb) {
+      if (!mounted) return;
+
+      pipeline.framebuffer = fb;
+      pipeline.previewBytes = Uint8List.fromList(
+        img.encodePng(PanelRerender.renderFramebuffer(fb))
+      );
+
+      setState(() {
+        session.update((s) => s.copyWith(
+          transfer: TransferState.idle,
+          progress: 0,
+          activeSlot: null
+        ));
+      });
+    };
+
+    ble.addImageListener(_imageListener);
+  }
+
+  @override
+  void dispose() {
+    ble.removeImageListener(_imageListener);
+    super.dispose();
   }
 
   Future<void> _prepareWorkingImage() async {
@@ -161,7 +190,7 @@ class _DashboardPageState extends State<DashboardPage> {
     if (fb == null) return;
 
     setState(() {
-      session = session.copyWith(
+      session.state = session.state.copyWith(
         transfer: TransferState.uploading,
         progress: 0
       );
@@ -170,10 +199,10 @@ class _DashboardPageState extends State<DashboardPage> {
     final flipped = flipVertical(fb);
     final packed = FramebufferPacker.pack(flipped);
 
-    final packets = UploadSession.build(imageNumber: session.activeSlot!, packedImageData: packed);
+    final packets = UploadSession.build(imageNumber: session.state.activeSlot!, packedImageData: packed);
 
     await ble.sendImage(packets);
-    await ble.sendMd5Trigger(imageNumber: session.activeSlot!, imageData: packed);
+    await ble.sendMd5Trigger(imageNumber: session.state.activeSlot!, imageData: packed);
   }
 
   @override
@@ -197,20 +226,20 @@ class _DashboardPageState extends State<DashboardPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        DeviceInfoCard(state: session),
+                        DeviceInfoCard(state: session.state),
                         const SizedBox(height: 16),
                         DeviceActionsPanel(
-                          activeSlot: session.activeSlot,
-                          onConnect: session.canConnect
+                          activeSlot: session.state.activeSlot,
+                          onConnect: session.state.canConnect
                             ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
                             : null,
-                          onDisconnect: session.canDisconnect
+                          onDisconnect: session.state.canDisconnect
                             ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
                             : null,
-                          onDownload: session.canDownload
-                            ? () => DashboardActions.downloadSlot(ble: ble, slot: session.activeSlot!, updateSession: updateSession)
+                          onDownload: session.state.canDownload
+                            ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
                             : null,
-                          onUpload: session.canTransfer
+                          onUpload: session.state.canTransfer
                             ? _uploadImage
                             : null,
                           onSlotChanged: (slot) {
@@ -317,15 +346,15 @@ class _DashboardPageState extends State<DashboardPage> {
             )
           ),
           // STATUS BAR
-          ValueListenableBuilder<double>(
-            valueListenable: ble.uploadProgress,
-            builder: (context, value, _) {
-              return StatusBar(
-                state: session,
-                progressListenable: ble.uploadProgress,
-              );
-            }
-          )
+          // ValueListenableBuilder<double>(
+          //   valueListenable: ble.uploadProgress,
+          //   builder: (context, value, _) {
+          //     return StatusBar(
+          //       state: session.state,
+          //       progressListenable: ble.uploadProgress,
+          //     );
+          //   }
+          // )
         ],
       )
     );

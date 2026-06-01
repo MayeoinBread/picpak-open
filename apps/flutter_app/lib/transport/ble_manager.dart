@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_app/transport/ble_session.dart';
 import 'package:flutter_app/transport/device_info.dart';
 import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
+import 'package:image/image.dart';
 import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import 'package:picpak_image/src/encoding/framebuffer_decoder.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';
@@ -19,6 +20,8 @@ class BleManager {
 
   ImageReadSession? _readSession;
 
+  final List<void Function(PaletteFramebuffer)> _imageListeners = [];
+
   Function(PaletteFramebuffer frameBuffer)? onImageDownloaded;
 
   Function(DeviceInfo info)? onDeviceInfo;
@@ -30,6 +33,16 @@ class BleManager {
   final ValueNotifier<double> uploadProgress = ValueNotifier<double>(0.0);
 
   Function()? onUploadComplete;
+
+  void addImageListener(
+    void Function(PaletteFramebuffer frameBuffer) listener
+  ) {
+    // _imageListeners.add(listener);
+  }
+
+  void removeImageListener(void Function(PaletteFramebuffer framebuffer) listener) {
+    // _imageListeners.remove(listener);
+  }
 
   Future<BluetoothDevice?> scanForDevice({
     Duration timeout = const Duration(seconds: 5)
@@ -223,6 +236,26 @@ class BleManager {
     await ff01!.write([0xAA, 0x03, lo, hi, 0xFF]);
   }
 
+  Future<PaletteFramebuffer> downloadFramebuffer(int slot) {
+    final completer = Completer<PaletteFramebuffer>();
+
+    late void Function(PaletteFramebuffer) handler;
+
+    handler = (framebuffer) {
+      removeImageListener(handler);
+
+      if (!completer.isCompleted) {
+        completer.complete(framebuffer);
+      }
+    };
+
+    addImageListener(handler);
+    
+    getImageInSlot(slot);
+
+    return completer.future;
+  }
+
   DeviceInfo? _parseDeviceInfo(List<int> data) {
     if (data.length < 10) return null;
 
@@ -285,6 +318,9 @@ class BleManager {
       final framebuffer = FramebufferDecoder.decode(framebufferBytes);
       
       onImageDownloaded?.call(framebuffer);
+      for (final listener in List.from(_imageListeners)) {
+        listener(framebuffer);
+      }
 
       onDownloadComplete?.call();
 
