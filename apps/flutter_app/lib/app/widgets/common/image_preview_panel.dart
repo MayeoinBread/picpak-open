@@ -3,13 +3,13 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 class ImagePreviewPanel extends StatelessWidget {
-  final String title;
+  final String? title;
   final int height;
   final Uint8List? imageBytes;
 
   const ImagePreviewPanel({
     super.key,
-    required this.title,
+    String? this.title,
     required this.height,
     required this.imageBytes
   });
@@ -22,10 +22,14 @@ class ImagePreviewPanel extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge
-            ),
+            if (title == null)
+              SizedBox(height:2)
+            else ...[
+              Text(
+                title!,
+                style: Theme.of(context).textTheme.titleLarge
+              ),
+            ],
             const SizedBox(height: 8),
             SizedBox(
               height: height.toDouble(),

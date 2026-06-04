@@ -1,38 +1,33 @@
 import 'dart:typed_data';
 
-enum SlotContentType {
-  empty,
-  image,
-  qr,
-  postit,
-}
+import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
 
 class LibraryItem {
   final int slot;
 
   final bool exists;
 
-  final Uint8List? thumbnail;
+  final Uint8List? thumbnailBytes;
 
-  final SlotContentType type;
+  final SlotMetadata metadata;
 
   const LibraryItem({
     required this.slot,
     required this.exists,
-    required this.thumbnail,
-    required this.type,
+    required this.thumbnailBytes,
+    required this.metadata
   });
 
   LibraryItem copyWith({
     bool? exists,
-    Uint8List? thumbnail,
-    SlotContentType? type,
+    Uint8List? thumbnailBytes,
+    SlotMetadata? metadata
   }) {
     return LibraryItem(
       slot: slot,
       exists: exists ?? this.exists,
-      thumbnail: thumbnail ?? this.thumbnail,
-      type: type ?? this.type,
+      thumbnailBytes: thumbnailBytes ?? this.thumbnailBytes,
+      metadata: metadata ?? this.metadata
     );
   }
 }

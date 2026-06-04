@@ -26,4 +26,24 @@ class PaletteFramebuffer {
   static PaletteFramebuffer empty() {
     return PaletteFramebuffer(width: 400, height: 300, pixels: Uint8List(300*400));
   }
+
+  static PaletteFramebuffer downscale(PaletteFramebuffer fb, int targetW, int targetH) {
+    final out = Uint8List(targetW * targetH);
+    for (int y = 0; y < targetH; y++) {
+      for (int x = 0; x < targetW; x++) {
+
+        final srcX = (x * fb.width) ~/ targetW;
+        final srcY = (y * fb.height) ~/ targetH;
+
+        final srcIndex = srcY * fb.width + srcX;
+        out[y * targetW + x] = fb.pixels[srcIndex];
+      }
+    }
+
+    return PaletteFramebuffer(
+      width: targetW,
+      height: targetH,
+      pixels: out,
+    );
+  }
 }

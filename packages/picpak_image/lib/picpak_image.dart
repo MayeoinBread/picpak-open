@@ -6,3 +6,4 @@ export 'src/processing/image_flip.dart';
 export 'src/processing/panel_rerender.dart';
 export 'src/pipeline/palette_framebuffer.dart';
 export 'src/models/image_adjustments.dart';
+export 'src/pipeline/fit_strategy.dart';

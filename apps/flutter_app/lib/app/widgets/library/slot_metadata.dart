@@ -1,3 +1,5 @@
+import 'package:picpak_image/picpak_image.dart';
+
 enum SlotContentType {
   empty,
   image,
@@ -21,11 +23,22 @@ class SlotMetadata {
   final String? text;
   final String? qrData;
 
+  final ImageAdjustments adjustments;
+
+  final DitherMode dither;
+  final FitStrategy fit;
+  final ImageFilter filter;
+
   const SlotMetadata({
     required this.type,
     this.syncState = SlotSyncState.clean,
     this.text,
-    this.qrData
+    this.qrData,
+
+    this.adjustments = const ImageAdjustments(brightness: 1.0, contrast: 1.0),
+    this.dither = DitherMode.none,
+    this.fit = FitStrategy.contain,
+    this.filter = ImageFilter.normal
   });
 
   SlotMetadata copyWith({
@@ -33,13 +46,20 @@ class SlotMetadata {
     SlotSyncState? syncState,
     String? text,
     String? qrData,
-    DateTime? updatedAt
+    ImageAdjustments? adjustments,
+    DitherMode? dither,
+    FitStrategy? fit,
+    ImageFilter? filter
   }) {
     return SlotMetadata(
       type: type ?? this.type,
       syncState: syncState ?? this.syncState,
       text: text ?? this.text,
-      qrData: qrData ?? this.qrData
+      qrData: qrData ?? this.qrData,
+      adjustments: adjustments ?? this.adjustments,
+      dither: dither ?? this.dither,
+      fit: fit ?? this.fit,
+      filter: filter ?? this.filter
     );
   }
 }

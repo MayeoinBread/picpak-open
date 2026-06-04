@@ -30,7 +30,6 @@ class DeviceActionsPanel extends StatelessWidget {
           onPressed: onConnect,
           child: const Text('Connect'),
         ),  
-        const Text('onConnect Disabled'),
 
         const SizedBox(height: 8),
 
@@ -48,9 +47,6 @@ class DeviceActionsPanel extends StatelessWidget {
         ElevatedButton(
           onPressed: onDownload,
           child: Text('Download')
-          // child: Text(activeSlot == null
-          //   ? 'Download'
-          //   : 'Download Slot $activeSlot'),
         ),
 
         const SizedBox(height: 8),

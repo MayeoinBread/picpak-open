@@ -8,11 +8,14 @@ class LibraryGrid extends StatelessWidget {
   final int? selectedSlot;
   final ValueChanged<int> onSelected;
 
+  final Future<void> Function(int slot)? onEdit;
+
   const LibraryGrid({
     super.key,
     required this.items,
     required this.selectedSlot,
     required this.onSelected,
+    required this.onEdit
   });
 
   @override
@@ -31,10 +34,12 @@ class LibraryGrid extends StatelessWidget {
         final item = items[index];
 
         return SlotTile(
-          thumbnail: item.thumbnail,
+          thumbnail: item.thumbnailBytes,
           exists: item.exists,
           selected: selectedSlot == item.slot,
+          metadata: item.metadata,
           onTap: () => onSelected(item.slot),
+          onLongPress: () => onEdit?.call(item.slot),
         );
       },
     );

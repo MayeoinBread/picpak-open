@@ -1,16 +1,18 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/controller/library_controller.dart';
 import 'package:flutter_app/app/services/ble_service.dart';
 import 'package:flutter_app/app/services/device_session_service.dart';
 import 'package:flutter_app/app/services/image_pipeline_controller.dart';
+import 'package:flutter_app/app/services/thumbnail_service.dart';
 import 'package:flutter_app/app/state/device_session_state.dart';
-import 'package:flutter_app/app/widgets/common/status_bar.dart';
 import 'package:flutter_app/app/widgets/library/library_grid.dart';
 import 'package:flutter_app/app/widgets/library/slot_inspector.dart';
+import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
+import 'package:flutter_app/app/widgets/popups/post_it_editor.dart';
 import 'package:image/image.dart' as img;
+import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/picpak_image.dart';
 
 class LibraryPage extends StatefulWidget {
@@ -29,8 +31,6 @@ class _LibraryPageState extends State<LibraryPage> {
   final ble = BleService.instance.manager;
 
   final session = DeviceSessionService.instance;
-
-  // late final void Function(PaletteFramebuffer) _imageListener;
 
   void updateSession(DeviceSessionState Function(DeviceSessionState current) updater) {
     setState(() { session.state = updater(session.state);});
@@ -73,9 +73,32 @@ class _LibraryPageState extends State<LibraryPage> {
       session: session,
       availableSlots: session.state.availableSlots,
       onSlotReady: (slot, thumb) {
-        controller.updateSlot(slot: slot, exists: true, thumbnail: thumb);
+        controller.updateSlot(
+          slot: slot,
+          exists: true,
+          thumbnailBytes: thumb,
+          metadata: const SlotMetadata(type: SlotContentType.image)
+        );
       }
     );
+  }
+
+  Future<void> _onEdit(int slot) async {
+    final item = controller.items[slot];
+
+    final metadata = await showPostItEditor(context, item.metadata);
+    
+    if (metadata == null) return;
+
+    final image = NoteRenderer.render(text: metadata.text ?? '', w: DeviceConstants.imageWidth, h: DeviceConstants.imageHeight);
+
+    final thumbnailBytes = ThumbnailService.createFromImage(image);
+
+    debugPrint('Thumbnail bytes: ${thumbnailBytes.length}');
+
+    controller.updateSlot(slot: slot, exists: true, thumbnailBytes: thumbnailBytes, metadata: metadata);
+    
+    // controller.updateMetadata(slot, updated);
   }
 
   @override
@@ -109,6 +132,7 @@ class _LibraryPageState extends State<LibraryPage> {
                       selectedSlot = slot;
                     });
                   },
+                  onEdit: _onEdit
                 ),
               ),
             ),
@@ -117,4 +141,4 @@ class _LibraryPageState extends State<LibraryPage> {
       },
     );
   }
-}
+} 
