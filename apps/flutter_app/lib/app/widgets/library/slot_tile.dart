@@ -56,6 +56,7 @@ class SlotTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('Tile build selected=$selected exists=$exists thumb=${thumbnail?.length}');
     final indicator = getStatusIndicator(metadata);
     return GestureDetector(
       onTap: onTap,
@@ -82,7 +83,8 @@ class SlotTile extends StatelessWidget {
                     opacity: metadata.pendingAction == SlotPendingAction.delete ? 0.4 : 1.0,
                     child: Image.memory(
                       thumbnail!,
-                      fit: BoxFit.cover
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
                     )
                   )
                 : const Center(child: Icon(Icons.image_not_supported_outlined))

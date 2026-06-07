@@ -25,30 +25,60 @@ class LibraryGrid extends StatelessWidget {
     debugPrint('LibraryGrid build'
     'items-${items.length}'
     'selected-$selectedSlot');
-    return GridView.builder(
-      itemCount: items.length,
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 5,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 1.0
-      ),
-      itemBuilder: (context, index) {
+    // return GridView.builder(
+    //   itemCount: items.length,
+    //   gridDelegate:
+    //       const SliverGridDelegateWithFixedCrossAxisCount(
+    //     crossAxisCount: 5,
+    //     crossAxisSpacing: 8,
+    //     mainAxisSpacing: 8,
+    //     childAspectRatio: 1.0
+    //   ),
+    //   itemBuilder: (context, index) {
 
-        final item = items[index];
+    //     final item = items[index];
 
-        return SlotTile(
-          key: ValueKey(item.slot),
-          thumbnail: item.thumbnailBytes,
-          exists: item.exists,
-          selected: selectedSlot == item.slot,
-          metadata: item.metadata,
-          onTap: () => onSelected(item.slot),
-          onEdit: () => onEdit(item.slot),
-          onDelete: () => onDelete(item.slot)
+    //     return SlotTile(
+    //       key: ValueKey(item.slot),
+    //       thumbnail: item.thumbnailBytes,
+    //       exists: item.exists,
+    //       selected: selectedSlot == item.slot,
+    //       metadata: item.metadata,
+    //       onTap: () => onSelected(item.slot),
+    //       onEdit: () => onEdit(item.slot),
+    //       onDelete: () => onDelete(item.slot)
+    //     );
+    //   },
+    // );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemSize = 120.0;
+
+        return SingleChildScrollView(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: List.generate(items.length, (index) {
+              final item = items[index];
+
+              return SizedBox(
+                width: itemSize,
+                height: itemSize,
+                child: SlotTile(
+                  key: ValueKey(item.slot),
+                  thumbnail: item.thumbnailBytes,
+                  exists: item.exists,
+                  selected: selectedSlot == item.slot,
+                  metadata: item.metadata,
+                  onTap: () => onSelected(item.slot),
+                  onEdit: () => onEdit(item.slot),
+                  onDelete: () => onDelete(item.slot),
+                )
+              );
+            })
+          )
         );
-      },
+      }
     );
   }
 }

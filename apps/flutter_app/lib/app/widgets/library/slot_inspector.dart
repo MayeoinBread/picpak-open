@@ -12,35 +12,37 @@ class SlotInspector extends StatelessWidget {
   });
 
   @override
-Widget build(BuildContext context) {
-  return Padding(
-    padding: const EdgeInsets.all(16),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ElevatedButton(
-          onPressed: onSync,
-          child: const Text('Sync Device'),
-        ),
+  Widget build(BuildContext context) {
+    debugPrint('Inspector build item=${item?.slot}');
 
-        const SizedBox(height: 16),
-
-        if (item == null)
-          const Text('No slot selected')
-        else ...[
-          Text(
-            'Slot ${item!.slot}',
-            style: Theme.of(context).textTheme.titleLarge,
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ElevatedButton(
+            onPressed: onSync,
+            child: const Text('Sync Device')
           ),
 
           const SizedBox(height: 16),
 
-          Text(
-            item!.exists ? 'Contains Image' : 'Empty Slot',
-          ),
+          if (item == null)  
+            const Text('No slot selected')
+          else ...[
+            Text(
+              'Slot ${item!.slot}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+
+            const SizedBox(height: 16),
+
+            Text(
+              item!.exists ? 'Contains Image' : 'Empty Slot',
+            ),
+          ],
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 }

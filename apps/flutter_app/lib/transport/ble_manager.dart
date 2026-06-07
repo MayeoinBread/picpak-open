@@ -7,7 +7,6 @@ import 'package:flutter_app/app/state/device_session_state.dart';
 import 'package:flutter_app/transport/ble_session.dart';
 import 'package:flutter_app/transport/device_info.dart';
 import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
-import 'package:image/image.dart';
 import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import 'package:picpak_image/src/encoding/framebuffer_decoder.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';

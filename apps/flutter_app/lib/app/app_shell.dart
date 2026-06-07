@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_app/app/services/ble_service.dart';
 import 'package:flutter_app/app/services/device_session_service.dart';
@@ -84,39 +82,39 @@ class _AppShellState extends State<AppShell> {
                     child: IndexedStack(
                       index: selectedIndex,
                       children: [
-                        // Builder(
-                        //   builder: (context) {
-                        //     debugPrint("DASHBOARD BUILDER ENTERED");
-                        //     WidgetsBinding.instance.addPostFrameCallback((_) {
-                        //       debugPrint("DASHBOARD FIRST FRAME");
-                        //     });
+                        Builder(
+                          builder: (context) {
+                            debugPrint("DASHBOARD BUILDER ENTERED");
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              debugPrint("DASHBOARD FIRST FRAME");
+                            });
                             
-                        //     return const DashboardPage();
-                        //   }
-                        // ),
-                        // Builder(
-                        //   builder: (context) {
-                        //     debugPrint("DEV BUILDER ENTERED");
-                        //     WidgetsBinding.instance.addPostFrameCallback((_) {
-                        //       debugPrint("DEV FIRST FRAME");
-                        //     });
+                            return const DashboardPage();
+                          }
+                        ),
+                        Builder(
+                          builder: (context) {
+                            debugPrint("DEV BUILDER ENTERED");
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              debugPrint("DEV FIRST FRAME");
+                            });
                             
-                        //     return const DevWorkbenchPage();
-                        //   }
-                        // ),
-                        // Builder(
-                        //   builder: (context) {
-                        //     debugPrint("LIB BUILDER ENTERED");
-                        //     WidgetsBinding.instance.addPostFrameCallback((_) {
-                        //       debugPrint("LIB FIRST FRAME");
-                        //     });
+                            return const DevWorkbenchPage();
+                          }
+                        ),
+                        Builder(
+                          builder: (context) {
+                            debugPrint("LIB BUILDER ENTERED");
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              debugPrint("LIB FIRST FRAME");
+                            });
                             
-                        //     return const LibraryPage();
-                        //   }
-                        // )
-                        const DashboardPage(),
-                        const DevWorkbenchPage(),
-                        const LibraryPage()
+                            return const LibraryPage();
+                          }
+                        )
+                        // const DashboardPage(),
+                        // const DevWorkbenchPage(),
+                        // const LibraryPage()
                       ],
                     ),
                   )
@@ -124,11 +122,6 @@ class _AppShellState extends State<AppShell> {
               ],
             ),
           ),
-
-          // StatusBar(
-          //   state: session.state,
-          //   progressListenable: uploadProgress,
-          // ),
 
           ValueListenableBuilder<DeviceSessionState>(
             valueListenable: session,

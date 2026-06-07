@@ -57,6 +57,12 @@ class _PicPakAppState extends State<PicPakApp> {
         colorSchemeSeed: Color.fromARGB(255, 0, 127, 255)
       ),
 
+      builder: (context, child) {
+        return ExcludeSemantics(
+          child: child ?? const SizedBox.shrink()
+        );
+      },
+
       home: AppShell(
         onToggleTheme: toggleTheme
       )

@@ -46,7 +46,7 @@ class _LibraryPageState extends State<LibraryPage> {
     debugPrint('Library initState');
     super.initState();
 
-    controller.initialise(700);
+    controller.initialise(20);
   }
 
   @override
@@ -80,20 +80,19 @@ class _LibraryPageState extends State<LibraryPage> {
       builder: (_) => ContentEditorDialog(
         item: item,
         onSaved: (metadata, thumbnail) {
+          debugPrint('SAVE slot=$slot');
           final mslot = slot;
 
           setState(() {
             selectedSlot = null;
           });
 
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            controller.updateSlot(
-              slot: mslot,
-              exists: true,
-              thumbnailBytes: thumbnail,
-              metadata: metadata
-            );
-          });
+          controller.updateSlot(
+            slot: mslot,
+            exists: true,
+            thumbnailBytes: thumbnail,
+            metadata: metadata
+          );
         }
       )
     );
@@ -113,7 +112,7 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('Library build');
+    debugPrint('Library build selected=$selectedSlot items=${controller.items.length}');
     // return AnimatedBuilder(
       // animation: controller,
     return ListenableBuilder(
@@ -125,11 +124,13 @@ class _LibraryPageState extends State<LibraryPage> {
 
             SizedBox(
               width: 300,
-              child: SlotInspector(
-                onSync: _sync,
-                item: selectedSlot == null
-                  ? null
-                  : controller.items[selectedSlot!]
+              child: ExcludeSemantics(
+                child: SlotInspector(
+                  onSync: _sync,
+                  item: selectedSlot == null
+                    ? null
+                    : controller.items[selectedSlot!]
+                ),
               ),
             ),
 
