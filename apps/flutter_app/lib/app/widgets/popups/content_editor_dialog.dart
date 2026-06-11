@@ -1,10 +1,11 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/widgets/library/library_item.dart';
-import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
-import 'package:flutter_app/app/widgets/popups/note_editor_tab.dart';
-import 'package:flutter_app/app/widgets/popups/qr_code_tab.dart';
+import 'package:picpak_open/app/widgets/library/library_item.dart';
+import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
+import 'package:picpak_open/app/widgets/popups/image_editor_tab.dart';
+import 'package:picpak_open/app/widgets/popups/note_editor_tab.dart';
+import 'package:picpak_open/app/widgets/popups/qr_code_tab.dart';
 
 class ContentEditorDialog extends StatelessWidget {
   final LibraryItem item;
@@ -27,11 +28,12 @@ class ContentEditorDialog extends StatelessWidget {
         width: 900,
         height: 600,
         child: DefaultTabController(
-          length: 2,
+          length: 3,
           child: Column(
             children: [
               const TabBar(
                 tabs: [
+                  Tab(text: 'Image'),
                   Tab(text: 'Note'),
                   Tab(text: 'QR')
                 ]
@@ -39,6 +41,10 @@ class ContentEditorDialog extends StatelessWidget {
               Expanded(
                 child: TabBarView(
                   children: [
+                    ImageEditorTab(
+                      item: item,
+                      onSaved: onSaved
+                    ),
                     NoteEditorTab(
                       item: item,
                       onSaved: onSaved

@@ -1,18 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_app/app/services/thumbnail_service.dart';
-import 'package:flutter_app/app/widgets/common/image_preview_panel.dart';
-import 'package:flutter_app/app/widgets/library/library_item.dart';
-import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
+import 'package:picpak_open/app/services/thumbnail_service.dart';
+import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
+import 'package:picpak_open/app/widgets/library/library_item.dart';
+import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/picpak_image.dart';
-
-enum QrType {
-  text,
-  url,
-  wifi
-}
 
 class QrCodeTab extends StatefulWidget {
   final LibraryItem item;
@@ -73,6 +67,9 @@ class _QrCodeTabState extends State<QrCodeTab> {
           'T:$securityType;'
           'S:${ssidController.text};'
           'P:${passwordController.text};;';
+        break;
+      case QrType.none:
+        payload = '';
         break;
     }
 

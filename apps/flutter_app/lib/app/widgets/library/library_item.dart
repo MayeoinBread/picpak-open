@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
+import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
 
 class LibraryItem {
   final int slot;

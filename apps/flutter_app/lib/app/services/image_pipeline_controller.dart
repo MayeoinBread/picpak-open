@@ -1,13 +1,9 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 import 'package:picpak_image/picpak_image.dart';
 
 import 'package:picpak_core/picpak_core.dart';
-import 'package:picpak_image/src/pipeline/fit_strategy.dart';
-import 'package:picpak_image/src/pipeline/image_pipeline.dart';
-import 'package:picpak_image/src/pipeline/pipeline_isolate.dart';
+import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
 
 class ImagePipelineController {
   img.Image? sourceImage;
@@ -22,6 +18,32 @@ class ImagePipelineController {
     sourceImage = pipeline.prepareBaseImage(decoded, fit);
   }
 
+  Future<void> processMetadata({
+    required SlotMetadata metadata,
+    bool simulateDevice = false
+    }) async {
+    if (sourceImage == null) return;
+
+    debugPrint('Simulate Device: $simulateDevice');
+
+    final result = await compute(
+      runPipelineIsolate,
+      PipelineRequest(
+        workingImage: sourceImage!,
+        filter: metadata.filter,
+        simulateDevice: simulateDevice,
+        width: DeviceConstants.imageWidth,
+        height: DeviceConstants.imageHeight,
+        fit: metadata.fit,
+        dither: metadata.dither,
+        adjustments: metadata.adjustments
+      )
+    );
+
+    framebuffer = result.framebuffer;
+    previewBytes = result.previewBytes;
+  }
+
   Future<void> process({
     required DitherMode dither,
     required ImageFilter filter,
@@ -30,6 +52,8 @@ class ImagePipelineController {
     required ImageAdjustments adjustments
   }) async {
     if (sourceImage == null) return;
+
+    debugPrint('Simulate Device: $simulateDevice');
 
     final result = await compute(
       runPipelineIsolate,

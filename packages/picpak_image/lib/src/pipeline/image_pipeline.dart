@@ -4,12 +4,8 @@ import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/dithering/dither_register.dart';
 import 'package:picpak_image/src/pipeline/framebuffer_preview_renderer.dart';
-import 'package:picpak_image/src/pipeline/pipeline_result.dart';
 import 'package:picpak_image/src/processing/image_adjustment_processor.dart';
-import 'package:picpak_image/src/processing/image_filter.dart';
 import 'package:picpak_image/src/processing/image_filter_processing.dart';
-import '../pipeline/fit_strategy.dart';
-import '../dithering/dither_mode.dart';
 
 class ImagePipeline {
   final int targetWidth;

@@ -1,4 +1,4 @@
-import 'package:flutter_app/app/widgets/library/library_item.dart';
+import 'package:picpak_open/app/widgets/library/library_item.dart';
 
 class DeviceLibrary {
   final String deviceSerial;

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/state/device_session_state.dart';
+import 'package:picpak_open/app/state/device_session_state.dart';
 
 class DeviceInfoCard extends StatelessWidget {
   final DeviceSessionState state;

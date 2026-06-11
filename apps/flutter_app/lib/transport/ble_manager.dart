@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_app/app/services/device_session_service.dart';
-import 'package:flutter_app/app/state/device_session_state.dart';
-import 'package:flutter_app/transport/ble_session.dart';
-import 'package:flutter_app/transport/device_info.dart';
+import 'package:picpak_open/app/services/device_session_service.dart';
+import 'package:picpak_open/app/state/device_session_state.dart';
+import 'package:picpak_open/transport/ble_session.dart';
+import 'package:picpak_open/transport/device_info.dart';
 import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
 import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
 import 'package:picpak_image/src/encoding/framebuffer_decoder.dart';

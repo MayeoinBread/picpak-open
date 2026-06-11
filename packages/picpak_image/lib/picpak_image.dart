@@ -12,3 +12,4 @@ export 'src/pipeline/image_pipeline.dart';
 export 'src/pipeline/pipeline_result.dart';
 export 'src/pipeline/pipeline_isolate.dart';
 export 'src/encoding/framebuffer_packer.dart';
+export 'src/encoding/framebuffer_decoder.dart';

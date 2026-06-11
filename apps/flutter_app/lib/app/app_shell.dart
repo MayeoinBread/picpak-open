@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/services/ble_service.dart';
-import 'package:flutter_app/app/services/device_session_service.dart';
-import 'package:flutter_app/app/state/device_session_state.dart';
-import 'package:flutter_app/app/widgets/common/status_bar.dart';
+import 'package:picpak_open/app/services/ble_service.dart';
+import 'package:picpak_open/app/services/device_session_service.dart';
+import 'package:picpak_open/app/state/device_session_state.dart';
+import 'package:picpak_open/app/widgets/common/status_bar.dart';
 
 import 'pages/dashboard_page.dart';
 import 'pages/dev_workbench_page.dart';

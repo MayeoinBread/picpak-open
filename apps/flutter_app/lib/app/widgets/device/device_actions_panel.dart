@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_app/app/widgets/controls/slot_input_field.dart';
+import 'package:picpak_open/app/widgets/controls/slot_input_field.dart';
 
 class DeviceActionsPanel extends StatelessWidget {
   final VoidCallback? onConnect;

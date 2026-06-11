@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
+import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
 
 class SlotTile extends StatelessWidget {
   final Uint8List? thumbnail;

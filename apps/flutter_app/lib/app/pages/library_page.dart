@@ -1,16 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/controller/library_controller.dart';
-import 'package:flutter_app/app/services/ble_service.dart';
-import 'package:flutter_app/app/services/device_session_service.dart';
-import 'package:flutter_app/app/services/image_pipeline_controller.dart';
-import 'package:flutter_app/app/state/device_session_state.dart';
-import 'package:flutter_app/app/widgets/library/library_grid.dart';
-import 'package:flutter_app/app/widgets/library/library_item.dart';
-import 'package:flutter_app/app/widgets/library/slot_inspector.dart';
-import 'package:flutter_app/app/widgets/library/slot_metadata.dart';
-import 'package:flutter_app/app/widgets/popups/content_editor_dialog.dart';
+import 'package:picpak_open/app/controller/library_controller.dart';
+import 'package:picpak_open/app/repositories/image_repository.dart';
+import 'package:picpak_open/app/repositories/slot_repository.dart';
+import 'package:picpak_open/app/services/ble_service.dart';
+import 'package:picpak_open/app/services/device_session_service.dart';
+import 'package:picpak_open/app/services/image_pipeline_controller.dart';
+import 'package:picpak_open/app/state/device_session_state.dart';
+import 'package:picpak_open/app/widgets/library/library_grid.dart';
+import 'package:picpak_open/app/widgets/library/library_item.dart';
+import 'package:picpak_open/app/widgets/library/slot_inspector.dart';
+import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
+import 'package:picpak_open/app/widgets/popups/content_editor_dialog.dart';
 
 class LibraryPage extends StatefulWidget {
 
@@ -46,7 +48,9 @@ class _LibraryPageState extends State<LibraryPage> {
     debugPrint('Library initState');
     super.initState();
 
-    controller.initialise(20);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.loadFromDatabase();
+    });
   }
 
   @override
@@ -57,7 +61,7 @@ class _LibraryPageState extends State<LibraryPage> {
   }
 
   Future<void> _sync() async {
-    await controller.syncLibrary(
+    await controller.pullFromDevice(
       ble: ble,
       session: session,
       availableSlots: session.state.availableSlots,
@@ -79,7 +83,7 @@ class _LibraryPageState extends State<LibraryPage> {
       context: context,
       builder: (_) => ContentEditorDialog(
         item: item,
-        onSaved: (metadata, thumbnail) {
+        onSaved: (metadata, thumbnail) async {
           debugPrint('SAVE slot=$slot');
           final mslot = slot;
 
@@ -93,6 +97,12 @@ class _LibraryPageState extends State<LibraryPage> {
             thumbnailBytes: thumbnail,
             metadata: metadata
           );
+
+          await SlotRepository().saveSlot(
+            slot: slot,
+            imageId: metadata.imageId,
+            metadata: metadata
+          );
         }
       )
     );
@@ -102,12 +112,16 @@ class _LibraryPageState extends State<LibraryPage> {
     final item = controller.items[slot];
     final metadata = item.metadata;
 
-    // TODO this messes up if an image was "pending upload"
+    SlotPendingAction newAction = SlotPendingAction.delete;
+
     if (metadata.pendingAction == SlotPendingAction.delete) {
-      controller.updateMetadata(slot, metadata.copyWith(pendingAction: SlotPendingAction.none));
-    } else {
-      controller.updateMetadata(slot, metadata.copyWith(pendingAction: SlotPendingAction.delete));
+      newAction = SlotPendingAction.none;
     }
+
+    final updatedMetadata = metadata.copyWith(pendingAction: newAction);
+    controller.updateMetadata(slot, updatedMetadata);
+
+    await SlotRepository().saveSlot(slot: slot, imageId: metadata.imageId, metadata: metadata);
   }
 
   @override
@@ -121,6 +135,13 @@ class _LibraryPageState extends State<LibraryPage> {
         final items = List<LibraryItem>.from(controller.items);
         return Row(
           children: [
+
+            ElevatedButton(
+              onPressed: (() async {
+                await controller.pushToDevice(ble: ble, session: session);
+              }),
+              child: const Text("Push Updates")
+            ),
 
             SizedBox(
               width: 300,

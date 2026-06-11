@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/app/widgets/library/library_item.dart';
+import 'package:picpak_open/app/widgets/library/library_item.dart';
 
 import 'slot_tile.dart';
 
