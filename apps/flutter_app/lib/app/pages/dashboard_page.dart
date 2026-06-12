@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
@@ -202,9 +201,155 @@ class _DashboardPageState extends State<DashboardPage> {
     await ble.sendMd5Trigger(imageNumber: session.state.activeSlot!, imageData: packed);
   }
 
+  List<Widget> _buildDesktopLayout(BuildContext context) {
+    return [
+      _leftPanel(context),
+      _centerPanel(context),
+      _rightPanel(context)
+    ];
+  }
+
+  List<Widget> _buildMobileLayout(BuildContext context) {
+    return [
+      Expanded(child: _centerPanel(context)),
+      SizedBox(height:300, child: _leftPanel(context)),
+      SizedBox(height: 400, child: _rightPanel(context))
+    ];
+  }
+
+  Widget _leftPanel(BuildContext context) {
+    return SizedBox(
+      width: 300,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            DeviceInfoCard(state: session.state),
+            const SizedBox(height: 16),
+            DeviceActionsPanel(
+              activeSlot: session.state.activeSlot,
+              onConnect: session.state.canConnect
+                ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
+                : null,
+              onDisconnect: session.state.canDisconnect
+                ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
+                : null,
+              onDownload: session.state.canDownload
+                ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
+                : null,
+              onUpload: session.state.canTransfer
+                ? _uploadImage
+                : null,
+              onSlotChanged: (slot) {
+                updateSession((s) => s.copyWith(activeSlot: slot));
+              },
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _centerPanel(BuildContext context) {
+    return Expanded(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            ImagePreviewPanel(
+              title: 'Original',
+              height: DeviceConstants.imageHeight,
+              imageBytes: _originalImageBytes
+            ),
+            const SizedBox(height: 16),
+            ImagePreviewPanel(
+              title: 'Preview',
+              height: DeviceConstants.imageHeight,
+              imageBytes: pipeline.previewBytes
+            )
+          ]
+        )
+      )
+    );
+  }
+
+  Widget _rightPanel(BuildContext context) {
+    return SizedBox(
+      width: 340,
+      child: Container(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: _pickImage,
+                      child: const Text('Import Image')
+                    ),
+                    const SizedBox(height: 8),
+                    DitheringControls(
+                      selectedAlgorithm: algorithm,
+                      onAlgorithmChanged: (newAlg) async {
+                        setState(() {
+                          algorithm = newAlg;
+                        });
+                        _reprocess();
+                      }
+                    ),
+                    const SizedBox(height: 8),
+                    ImageAdjustmentControls(
+                      adjustments: adjustments,
+                      onChanged: (newAdjustments) async {
+                        setState(() {
+                          adjustments = newAdjustments;
+                        });
+
+                        _reprocess();
+                      }
+                    ),
+                    const SizedBox(height: 8),
+                    ProcessingOptionsPanel(
+                      selectedFilter: _filter,
+                      fitStrategy: _fitStrategy,
+                      simulateDevice: _simulateDeviceScreen,
+                      onFilterChanged: (filter) async {
+                        setState(() {
+                          _filter = filter;
+                        });
+                        _reprocess();
+                      },
+                      onFitChanged: (fit) async {
+                        setState(() {
+                          _fitStrategy = fit;
+                        });
+                        _reprocess();
+                      },
+                      onSimulateChanged: (simulate) async {
+                        setState(() {
+                          _simulateDeviceScreen = simulate;
+                        });
+                        _reprocess();
+                      }
+                    )
+                  ]
+                )
+              )
+            ),
+          ],
+        )
+      )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     debugPrint('Dashboard build');
+    final isMobile = MediaQuery.of(context).size.width < 700;
     return Scaffold(
       appBar: AppBar(
         title: const Text('PicPak Open')
@@ -213,135 +358,138 @@ class _DashboardPageState extends State<DashboardPage> {
       body: Column(
         children: [
           Expanded(
-            child: Row(
-              children: [
-                // LEFT PANEL
-                SizedBox(
-                  width: 300,
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        DeviceInfoCard(state: session.state),
-                        const SizedBox(height: 16),
-                        DeviceActionsPanel(
-                          activeSlot: session.state.activeSlot,
-                          onConnect: session.state.canConnect
-                            ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
-                            : null,
-                          onDisconnect: session.state.canDisconnect
-                            ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
-                            : null,
-                          onDownload: session.state.canDownload
-                            ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
-                            : null,
-                          onUpload: session.state.canTransfer
-                            ? _uploadImage
-                            : null,
-                          onSlotChanged: (slot) {
-                            updateSession((s) => s.copyWith(activeSlot: slot));
-                          },
-                        )
-                      ],
-                    ),
-                  ),
-                ),
+            child: isMobile
+              ? Column(children: _buildMobileLayout(context))
+              : Row(children: _buildDesktopLayout(context))
+            // child: Row(
+            //   children: [
+            //     // LEFT PANEL
+            //     SizedBox(
+            //       width: 300,
+            //       child: Container(
+            //         padding: const EdgeInsets.all(16),
+            //         color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            //         child: Column(
+            //           crossAxisAlignment: CrossAxisAlignment.stretch,
+            //           children: [
+            //             DeviceInfoCard(state: session.state),
+            //             const SizedBox(height: 16),
+            //             DeviceActionsPanel(
+            //               activeSlot: session.state.activeSlot,
+            //               onConnect: session.state.canConnect
+            //                 ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
+            //                 : null,
+            //               onDisconnect: session.state.canDisconnect
+            //                 ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
+            //                 : null,
+            //               onDownload: session.state.canDownload
+            //                 ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
+            //                 : null,
+            //               onUpload: session.state.canTransfer
+            //                 ? _uploadImage
+            //                 : null,
+            //               onSlotChanged: (slot) {
+            //                 updateSession((s) => s.copyWith(activeSlot: slot));
+            //               },
+            //             )
+            //           ],
+            //         ),
+            //       ),
+            //     ),
 
-                // CENTER
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        ImagePreviewPanel(
-                          title: 'Original',
-                          height: DeviceConstants.imageHeight,
-                          imageBytes: _originalImageBytes
-                        ),
-                        const SizedBox(height: 16),
-                        ImagePreviewPanel(
-                          title: 'Preview',
-                          height: DeviceConstants.imageHeight,
-                          imageBytes: pipeline.previewBytes
-                        )
-                      ]
-                    )
-                  )
-                ),
+            //     // CENTER
+            //     Expanded(
+            //       child: SingleChildScrollView(
+            //         padding: const EdgeInsets.all(16),
+            //         child: Column(
+            //           children: [
+            //             ImagePreviewPanel(
+            //               title: 'Original',
+            //               height: DeviceConstants.imageHeight,
+            //               imageBytes: _originalImageBytes
+            //             ),
+            //             const SizedBox(height: 16),
+            //             ImagePreviewPanel(
+            //               title: 'Preview',
+            //               height: DeviceConstants.imageHeight,
+            //               imageBytes: pipeline.previewBytes
+            //             )
+            //           ]
+            //         )
+            //       )
+            //     ),
 
-                // RIGHT PANEL
-                SizedBox(
-                  width: 340,
-                  child: Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: SingleChildScrollView(
-                            padding: const EdgeInsets.all(8),
-                            child: Column(
-                              children: [
-                                ElevatedButton(
-                                  onPressed: _pickImage,
-                                  child: const Text('Import Image')
-                                ),
-                                const SizedBox(height: 8),
-                                DitheringControls(
-                                  selectedAlgorithm: algorithm,
-                                  onAlgorithmChanged: (newAlg) async {
-                                    setState(() {
-                                      algorithm = newAlg;
-                                    });
-                                    _reprocess();
-                                  }
-                                ),
-                                const SizedBox(height: 8),
-                                ImageAdjustmentControls(
-                                  adjustments: adjustments,
-                                  onChanged: (newAdjustments) async {
-                                    setState(() {
-                                      adjustments = newAdjustments;
-                                    });
+            //     // RIGHT PANEL
+            //     SizedBox(
+            //       width: 340,
+            //       child: Container(
+            //         color: Theme.of(context).colorScheme.surfaceContainerLowest,
+            //         child: Column(
+            //           children: [
+            //             Expanded(
+            //               child: SingleChildScrollView(
+            //                 padding: const EdgeInsets.all(8),
+            //                 child: Column(
+            //                   children: [
+            //                     ElevatedButton(
+            //                       onPressed: _pickImage,
+            //                       child: const Text('Import Image')
+            //                     ),
+            //                     const SizedBox(height: 8),
+            //                     DitheringControls(
+            //                       selectedAlgorithm: algorithm,
+            //                       onAlgorithmChanged: (newAlg) async {
+            //                         setState(() {
+            //                           algorithm = newAlg;
+            //                         });
+            //                         _reprocess();
+            //                       }
+            //                     ),
+            //                     const SizedBox(height: 8),
+            //                     ImageAdjustmentControls(
+            //                       adjustments: adjustments,
+            //                       onChanged: (newAdjustments) async {
+            //                         setState(() {
+            //                           adjustments = newAdjustments;
+            //                         });
 
-                                    _reprocess();
-                                  }
-                                ),
-                                const SizedBox(height: 8),
-                                ProcessingOptionsPanel(
-                                  selectedFilter: _filter,
-                                  fitStrategy: _fitStrategy,
-                                  simulateDevice: _simulateDeviceScreen,
-                                  onFilterChanged: (filter) async {
-                                    setState(() {
-                                      _filter = filter;
-                                    });
-                                    _reprocess();
-                                  },
-                                  onFitChanged: (fit) async {
-                                    setState(() {
-                                      _fitStrategy = fit;
-                                    });
-                                    _reprocess();
-                                  },
-                                  onSimulateChanged: (simulate) async {
-                                    setState(() {
-                                      _simulateDeviceScreen = simulate;
-                                    });
-                                    _reprocess();
-                                  }
-                                )
-                              ]
-                            )
-                          )
-                        ),
-                      ],
-                    )
-                  )
-                )
-              ]
-            )
+            //                         _reprocess();
+            //                       }
+            //                     ),
+            //                     const SizedBox(height: 8),
+            //                     ProcessingOptionsPanel(
+            //                       selectedFilter: _filter,
+            //                       fitStrategy: _fitStrategy,
+            //                       simulateDevice: _simulateDeviceScreen,
+            //                       onFilterChanged: (filter) async {
+            //                         setState(() {
+            //                           _filter = filter;
+            //                         });
+            //                         _reprocess();
+            //                       },
+            //                       onFitChanged: (fit) async {
+            //                         setState(() {
+            //                           _fitStrategy = fit;
+            //                         });
+            //                         _reprocess();
+            //                       },
+            //                       onSimulateChanged: (simulate) async {
+            //                         setState(() {
+            //                           _simulateDeviceScreen = simulate;
+            //                         });
+            //                         _reprocess();
+            //                       }
+            //                     )
+            //                   ]
+            //                 )
+            //               )
+            //             ),
+            //           ],
+            //         )
+            //       )
+            //     )
+            //   ]
+            // )
           ),
         ],
       )
