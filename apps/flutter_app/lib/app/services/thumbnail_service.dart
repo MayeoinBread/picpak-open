@@ -16,7 +16,7 @@ class ThumbnailService {
   }
 
   static Uint8List createFromImage(img.Image image) {
-    final thumb = img.copyResize(image, width: 300, interpolation: img.Interpolation.nearest);
+    final thumb = img.copyResize(image, width: 400, interpolation: img.Interpolation.nearest);
 
     final thumbBytes = Uint8List.fromList(img.encodePng(thumb));
 

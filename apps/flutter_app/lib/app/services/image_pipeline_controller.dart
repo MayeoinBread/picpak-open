@@ -38,7 +38,8 @@ class ImagePipelineController {
         height: DeviceConstants.imageHeight,
         fit: metadata.fit,
         dither: metadata.dither,
-        adjustments: metadata.adjustments
+        adjustments: metadata.adjustments,
+        paletteBias: metadata.paletteBias
       )
     );
 
@@ -51,7 +52,8 @@ class ImagePipelineController {
     required ImageFilter filter,
     required bool simulateDevice,
     required FitStrategy fit,
-    required ImageAdjustments adjustments
+    required ImageAdjustments adjustments,
+    required PaletteBias paletteBias
   }) async {
     if (sourceImage == null) return;
 
@@ -67,7 +69,8 @@ class ImagePipelineController {
         height: DeviceConstants.imageHeight,
         fit: fit,
         dither: dither,
-        adjustments: adjustments
+        adjustments: adjustments,
+        paletteBias: paletteBias
       )
     );
 

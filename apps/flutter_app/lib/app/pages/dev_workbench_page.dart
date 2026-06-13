@@ -44,6 +44,10 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
 
   double _brightness = 0.0;
   double _contrast = 1.0;
+  double _saturation = 1.0;
+
+  double _biasRed = 1.0;
+  double _biasYellow = 1.0;
 
   late StreamSubscription sub;
 
@@ -115,7 +119,8 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
         height: DeviceConstants.imageHeight,
         fit: _fitStrategy,
         dither: _ditherMode,
-        adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast)
+        adjustments: ImageAdjustments(brightness: _brightness, contrast: _contrast, saturation: _saturation),
+        paletteBias: PaletteBias(red: _biasRed, yellow: _biasYellow)
       ),
     );
 
@@ -393,6 +398,27 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
                     )
                   ]
                 ),
+
+                Column (
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Saturation"),
+                    Slider(
+                      value: _saturation,
+                      divisions: 20,
+                      min: 0.0,
+                      max: 2.0,
+                      onChanged: (v) {
+                        setState(() {
+                          _saturation = v;
+                        });
+                      },
+                      onChangeEnd: (_) {
+                        _reprocess();
+                      }
+                    )
+                  ],
+                )
               ],
             ),
           ),

@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+enum CropHandle {
+  none,
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight
+}
+
 class CropOverlay extends StatefulWidget {
   final Rect? initialRect;
   final double aspectRatio;
@@ -21,11 +29,71 @@ class CropOverlay extends StatefulWidget {
 class _CropOverlayState extends State<CropOverlay> {
   late Rect cropRect;
 
+  CropHandle _activeHandle = CropHandle.none;
+  static const double _handleRadius = 20;
+
   @override
   void initState() {
     super.initState();
 
     cropRect = widget.initialRect ?? _defaultCenterCrop(widget.imageSize, widget.aspectRatio);
+  }
+
+  CropHandle _hitTestHandle(Offset pos, Rect paintRect) {
+    if ((pos - paintRect.topLeft).distance <= _handleRadius) {
+      return CropHandle.topLeft;
+    }
+
+    if ((pos - paintRect.topRight).distance <= _handleRadius) {
+      return CropHandle.topRight;
+    }
+
+    if ((pos - paintRect.bottomLeft).distance <= _handleRadius) {
+      return CropHandle.bottomLeft;
+    }
+
+    if ((pos - paintRect.bottomRight).distance <= _handleRadius) {
+      return CropHandle.bottomRight;
+    }
+
+    return CropHandle.none;
+  }
+
+  void _resize(CropHandle handle, Offset delta, double scaleX) {
+    final dx = delta.dx / scaleX;
+
+    Rect r = cropRect;
+
+    switch (handle) {
+      case CropHandle.bottomRight:
+        final width = (r.width + dx).clamp(50.0, widget.imageSize.width);
+        final height = width / widget.aspectRatio;
+        r = Rect.fromLTWH(r.left, r.top, width, height);
+        break;
+      case CropHandle.bottomLeft:
+        final width = (r.width - dx).clamp(50.0, widget.imageSize.width);
+        final height = width / widget.aspectRatio;
+        r = Rect.fromLTWH(r.right - width, r.top, width, height);
+        break;
+      case CropHandle.topRight:
+        final width = (r.width + dx).clamp(50.0, widget.imageSize.width);
+        final height = width / widget.aspectRatio;
+        r = Rect.fromLTWH(r.left, r.bottom - height, width, height);
+        break;
+      case CropHandle.topLeft:
+        final width = (r.width - dx).clamp(50.0, widget.imageSize.width);
+        final height = width / widget.aspectRatio;
+        r = Rect.fromLTWH(r.right - width, r.bottom - height, width, height);
+        break;
+      case CropHandle.none:
+        return;
+    }
+
+    setState(() {
+      cropRect = _clampToBounds(r);
+    });
+
+    widget.onChanged(cropRect);
   }
 
   Rect _defaultCenterCrop(Size size, double aspect) {
@@ -81,7 +149,15 @@ class _CropOverlayState extends State<CropOverlay> {
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque,
+          onPanStart: (details) {
+            _activeHandle = _hitTestHandle(details.localPosition, paintRect);
+          },
           onPanUpdate: (details) {
+            if (_activeHandle != CropHandle.none) {
+              _resize(_activeHandle, details.delta, scaleX);
+              return;
+            }
+
             final dx = details.delta.dx / scaleX;
             final dy = details.delta.dy / scaleY;
 
@@ -90,6 +166,9 @@ class _CropOverlayState extends State<CropOverlay> {
             });
 
             widget.onChanged(cropRect);
+          },
+          onPanEnd: (_) {
+            _activeHandle = CropHandle.none;
           },
           child: CustomPaint(
             size: Size(constraints.maxWidth, constraints.maxHeight),
@@ -109,7 +188,7 @@ class _CropPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final overlayPaint = Paint()
-      ..color = Colors.black.withOpacity(0.5);
+      ..color = Colors.black45;
 
     final borderPaint = Paint()
       ..color = Colors.white
@@ -156,6 +235,15 @@ class _CropPainter extends CustomPainter {
     );
 
     canvas.drawRect(rect, borderPaint);
+
+    final handlePaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawCircle(rect.topLeft, 8, handlePaint);
+    canvas.drawCircle(rect.topRight, 8, handlePaint);
+    canvas.drawCircle(rect.bottomLeft, 8, handlePaint);
+    canvas.drawCircle(rect.bottomRight, 8, handlePaint);
   }
 
   @override

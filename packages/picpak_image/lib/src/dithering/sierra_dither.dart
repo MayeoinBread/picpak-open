@@ -2,16 +2,16 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_image/picpak_image.dart';
 
 import '../palette/palette_mapper.dart';
-import '../pipeline/palette_framebuffer.dart';
 import 'dither_engine.dart';
 
 class SierraDither implements DitherEngine {
   String get name => "Sierra Lite";
 
   @override
-  PaletteFramebuffer apply(img.Image image) {
+  PaletteFramebuffer apply(img.Image image, PaletteBias bias) {
     final working = img.Image.from(image);
 
     final output = PaletteFramebuffer(
@@ -28,6 +28,7 @@ class SierraDither implements DitherEngine {
           oldPixel.r.toInt(),
           oldPixel.g.toInt(),
           oldPixel.b.toInt(),
+          bias
         );
 
         output.setPixel(x, y, mapped);

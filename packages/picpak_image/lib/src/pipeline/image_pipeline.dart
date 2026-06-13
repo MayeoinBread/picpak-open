@@ -23,6 +23,7 @@ class ImagePipeline {
     required ImageFilter filter,
     required bool simulateDevice,
     required ImageAdjustments adjustments,
+    required PaletteBias paletteBias,
     FitStrategy fit = FitStrategy.crop,
     DitherMode dither = DitherMode.floydSteinberg,
   }) {
@@ -34,7 +35,9 @@ class ImagePipeline {
 
     final adjusted = ImageAdjustmentProcessor.apply(filtered, adjustments);
 
-    final framebuffer = DitherRegistry.create(dither).apply(adjusted);
+    final sharpened = ImageAdjustmentProcessor.applySharpen(adjusted, adjustments.sharpen);
+
+    final framebuffer = DitherRegistry.create(dither).apply(sharpened, paletteBias);
 
     final preview = FramebufferPreviewRenderer.render(
       framebuffer, simulateDevice: simulateDevice

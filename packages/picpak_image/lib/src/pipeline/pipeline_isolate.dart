@@ -1,9 +1,5 @@
 import 'package:image/image.dart' as img;
 import 'package:picpak_image/picpak_image.dart';
-import 'package:picpak_image/src/pipeline/fit_strategy.dart';
-
-import 'image_pipeline.dart';
-import 'pipeline_result.dart';
 
 PipelineResult runPipelineIsolate(dynamic data) {
   final req = data as PipelineRequest;
@@ -17,6 +13,7 @@ PipelineResult runPipelineIsolate(dynamic data) {
     filter: req.filter,
     simulateDevice: req.simulateDevice,
     adjustments: req.adjustments,
+    paletteBias: req.paletteBias,
     fit: req.fit,
     dither: req.dither,
   );
@@ -31,6 +28,7 @@ class PipelineRequest {
   final FitStrategy fit;
   final DitherMode dither;
   final ImageAdjustments adjustments;
+  final PaletteBias paletteBias;
 
   PipelineRequest({
     required this.workingImage,
@@ -40,6 +38,7 @@ class PipelineRequest {
     required this.height,
     required this.fit,
     required this.dither,
-    required this.adjustments
+    required this.adjustments,
+    required this.paletteBias
   });
 }

@@ -164,7 +164,8 @@ class LibraryController extends ChangeNotifier {
                 height: DeviceConstants.imageHeight,
                 fit: FitStrategy.contain,
                 dither: DitherMode.none,
-                adjustments: ImageAdjustments(brightness: 0.0, contrast: 1.0)
+                adjustments: ImageAdjustments(),
+                paletteBias: PaletteBias()
               )
             );
 
@@ -191,7 +192,8 @@ class LibraryController extends ChangeNotifier {
                 height: DeviceConstants.imageHeight,
                 fit: FitStrategy.contain,
                 dither: DitherMode.none,
-                adjustments: ImageAdjustments(brightness: 0.0, contrast: 1.0)
+                adjustments: ImageAdjustments(),
+                paletteBias: PaletteBias()
               )
             );
 

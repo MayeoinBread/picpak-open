@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
+import 'package:picpak_image/picpak_image.dart';
 
 import '../palette/palette_mapper.dart';
 import '../pipeline/palette_framebuffer.dart';
@@ -17,7 +18,7 @@ class OrderedDither implements DitherEngine {
   ];
 
   @override
-  PaletteFramebuffer apply(img.Image image) {
+  PaletteFramebuffer apply(img.Image image, PaletteBias bias) {
     final output = PaletteFramebuffer(
       width: image.width,
       height: image.height,
@@ -35,7 +36,7 @@ class OrderedDither implements DitherEngine {
         final g = (pixel.g + threshold).clamp(0, 255).toInt();
         final b = (pixel.b + threshold).clamp(0, 255).toInt();
 
-        final mapped = PaletteMapper.map(r, g, b);
+        final mapped = PaletteMapper.map(r, g, b, bias);
 
         output.setPixel(x, y, mapped);
       }

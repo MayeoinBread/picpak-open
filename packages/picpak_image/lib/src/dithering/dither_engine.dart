@@ -1,7 +1,6 @@
 import 'package:image/image.dart' as img;
-
-import '../pipeline/palette_framebuffer.dart';
+import 'package:picpak_image/picpak_image.dart';
 
 abstract class DitherEngine {
-  PaletteFramebuffer apply(img.Image image);
+  PaletteFramebuffer apply(img.Image image, PaletteBias bias);
 }

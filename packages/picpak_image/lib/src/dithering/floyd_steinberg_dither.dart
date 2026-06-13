@@ -2,15 +2,15 @@ import 'dart:typed_data';
 
 import 'package:image/image.dart' as img;
 import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/dithering/dither_engine.dart';
 import '../palette/palette_mapper.dart';
-import '../pipeline/palette_framebuffer.dart';
 
 class FloydSteinbergDither implements DitherEngine {
   String get name => "Floyd-Steinberg";
 
   @override
-  PaletteFramebuffer apply(img.Image input) {
+  PaletteFramebuffer apply(img.Image input, PaletteBias bias) {
     final width = input.width;
     final height = input.height;
 
@@ -37,7 +37,7 @@ class FloydSteinbergDither implements DitherEngine {
         final oldG = g[y][x].clamp(0, 255).toInt();
         final oldB = b[y][x].clamp(0, 255).toInt();
 
-        final mapped = PaletteMapper.map(oldR, oldG, oldB);
+        final mapped = PaletteMapper.map(oldR, oldG, oldB, bias);
 
         final paletteColour = ProtocolPalette.all.firstWhere(
           (c) => c.index == mapped

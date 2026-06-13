@@ -3,5 +3,8 @@ enum DitherMode {
   floydSteinberg,
   atkinson,
   ordered,
-  sierra
+  sierra,
+  burkes,
+  jjn,
+  stucki
 }

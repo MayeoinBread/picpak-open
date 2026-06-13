@@ -5,8 +5,8 @@ import 'package:picpak_image/picpak_image.dart';
 import 'package:picpak_image/src/dithering/dither_engine.dart';
 import '../palette/palette_mapper.dart';
 
-class AtkinsonDither implements DitherEngine {
-  String get name => "Atkinson";
+class JjnDither implements DitherEngine {
+  String get name => "JJN";
 
   @override
   PaletteFramebuffer apply(img.Image input, PaletteBias bias) {
@@ -43,18 +43,24 @@ class AtkinsonDither implements DitherEngine {
 
         output.setPixel(x, y, mapped);
 
-        final errR = (oldR - paletteColour.r) / 8.0;
-        final errG = (oldG - paletteColour.g) / 8.0;
-        final errB = (oldB - paletteColour.b) / 8.0;
+        final errR = (oldR - paletteColour.r) / 48.0;
+        final errG = (oldG - paletteColour.g) / 48.0;
+        final errB = (oldB - paletteColour.b) / 48.0;
 
-        _distributed(r, g, b, x + 1, y,     errR, errG, errB, width, height);
-        _distributed(r, g, b, x + 2, y,     errR, errG, errB, width, height);
+        _distributed(r,g,b,x+1,y,errR*7,errG*7,errB*7,width,height);
+        _distributed(r,g,b,x+2,y,errR*5,errG*5,errB*5,width,height);
 
-        _distributed(r, g, b, x - 1, y + 1, errR, errG, errB, width, height);
-        _distributed(r, g, b, x,     y + 1, errR, errG, errB, width, height);
-        _distributed(r, g, b, x + 1, y + 1, errR, errG, errB, width, height);
+        _distributed(r,g,b,x-2,y+1,errR*3,errG*3,errB*3,width,height);
+        _distributed(r,g,b,x-1,y+1,errR*5,errG*5,errB*5,width,height);
+        _distributed(r,g,b,x,y+1,errR*7,errG*7,errB*7,width,height);
+        _distributed(r,g,b,x+1,y+1,errR*5,errG*5,errB*5,width,height);
+        _distributed(r,g,b,x+2,y+1,errR*3,errG*3,errB*3,width,height);
 
-        _distributed(r, g, b, x,     y + 2, errR, errG, errB, width, height);
+        _distributed(r,g,b,x-2,y+2,errR*1,errG*1,errB*1,width,height);
+        _distributed(r,g,b,x-1,y+2,errR*3,errG*3,errB*3,width,height);
+        _distributed(r,g,b,x,y+2,errR*5,errG*5,errB*5,width,height);
+        _distributed(r,g,b,x+1,y+2,errR*3,errG*3,errB*3,width,height);
+        _distributed(r,g,b,x+2,y+2,errR*1,errG*1,errB*1,width,height);
       }
     }
 

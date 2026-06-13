@@ -50,22 +50,6 @@ class ImageAdjustmentControls extends StatelessWidget {
               ]
             ),
 
-            // ExcludeSemantics(
-            //   child: Slider(
-            //     value: adjustments.brightness,
-            //     min: -1.0,
-            //     max: 1.0,
-            //     onChanged: (value) {
-            //       // onChanged(adjustments.copyWith(brightness: value));
-            //     },
-            //     onChangeEnd: (value) {
-            //       onChanged(adjustments.copyWith(brightness: value));
-            //     },
-            //   )
-            // ),
-            // Text(adjustments.brightness.toStringAsFixed(2)),
-
-
             const SizedBox(height: 24),
 
             // CONTRAST
@@ -92,22 +76,45 @@ class ImageAdjustmentControls extends StatelessWidget {
                   },
                 )
               ]
-            )
+            ),
             
-            // ExcludeSemantics(
-            //   child: Slider(
-            //     value: adjustments.contrast,
-            //     min: 0.0,
-            //     max: 2.0,
-            //     onChanged: (value) {
-            //       // onChanged(adjustments.copyWith(contrast: value));
-            //     },
-            //     onChangeEnd: (value) {
-            //       onChanged(adjustments.copyWith(contrast: value));
-            //     },
-            //   )
-            // ),
-            // Text(adjustments.contrast.toStringAsFixed(2))
+            const SizedBox(height: 24),
+
+            Text('Saturation', style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.remove),
+                  onPressed: () {
+                    final v = (adjustments.saturation - 0.1).clamp(0.0, 2.0);
+                    onChanged(adjustments.copyWith(saturation: v));
+                  }),
+                Expanded(
+                  child: Center(
+                    child: Text(adjustments.saturation.toStringAsFixed(2))
+                  )
+                ),
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () {
+                    final v = (adjustments.saturation + 0.1).clamp(0.0, 2.0);
+                    onChanged(adjustments.copyWith(saturation: v));
+                  }
+                )
+              ]
+            ),
+
+            const SizedBox(height: 24),
+
+            Text('Sharpen', style: Theme.of(context).textTheme.titleMedium),
+            Slider(
+              min: 0.0, max: 2.0, divisions: 20,
+              value: adjustments.sharpen,
+              onChanged: (value) {
+                onChanged(adjustments.copyWith(sharpen: value));
+              }
+            )
+
           ]
         )
       )

@@ -29,7 +29,8 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
 
   DitherMode algorithm = DitherMode.atkinson;
-  ImageAdjustments adjustments = ImageAdjustments(brightness: 0.0, contrast: 1.0);
+  ImageAdjustments adjustments = ImageAdjustments();
+  PaletteBias paletteBias = PaletteBias();
 
   // DeviceSessionState session = DeviceSessionState(connection: ConnectionState.disconnected, transfer: TransferState.idle, progress: 0.0, deviceName: 'Not Connected', batteryPercent: 0, firmware: '-', availableSlots: const []);
   final session = DeviceSessionService.instance;
@@ -148,7 +149,8 @@ class _DashboardPageState extends State<DashboardPage> {
       filter: _filter,
       simulateDevice: _simulateDeviceScreen,
       fit: _fitStrategy,
-      adjustments: adjustments
+      adjustments: adjustments,
+      paletteBias: paletteBias
     );
   }
 

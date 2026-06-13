@@ -76,6 +76,8 @@ class SlotMetadata {
 
   final Rect? cropRect;
 
+  final PaletteBias paletteBias;
+
   const SlotMetadata({
     required this.type,
     this.syncState = SlotSyncState.clean,
@@ -86,10 +88,12 @@ class SlotMetadata {
     this.wifiPassword,
     this.wifiSecurity,
 
-    this.adjustments = const ImageAdjustments(brightness: 1.0, contrast: 1.0),
+    this.adjustments = const ImageAdjustments(brightness: 0.0, contrast: 1.0, saturation: 1.0),
     this.dither = DitherMode.none,
     this.fit = FitStrategy.contain,
     this.filter = ImageFilter.normal,
+
+    this.paletteBias = const PaletteBias(),
 
     this.imageId,
 
@@ -106,6 +110,7 @@ class SlotMetadata {
     String? wifiPassword,
     String? wifiSecurity,
     ImageAdjustments? adjustments,
+    PaletteBias? paletteBias,
     DitherMode? dither,
     FitStrategy? fit,
     ImageFilter? filter,
@@ -122,6 +127,7 @@ class SlotMetadata {
       wifiPassword: wifiPassword ?? this.wifiPassword,
       wifiSecurity: wifiSecurity ?? this.wifiSecurity,
       adjustments: adjustments ?? this.adjustments,
+      paletteBias: paletteBias ?? this.paletteBias,
       dither: dither ?? this.dither,
       fit: fit ?? this.fit,
       filter: filter ?? this.filter,
@@ -142,6 +148,12 @@ class SlotMetadata {
       'imageId': imageId,
       'brightness': adjustments.brightness,
       'contrast': adjustments.contrast,
+      'saturation': adjustments.saturation,
+      'sharpen': adjustments.sharpen,
+      'blackBias': paletteBias.black,
+      'whiteBias': paletteBias.white,
+      'redBias': paletteBias.red,
+      'yellowBias': paletteBias.yellow,
       'dither': dither.name,
       'fit': fit.name,
       'filter': filter.name,
@@ -177,6 +189,15 @@ class SlotMetadata {
       adjustments: ImageAdjustments(
         brightness: (json['brightness'] as num?)?.toDouble() ?? 0.0,
         contrast: (json['contrast'] as num?)?.toDouble() ?? 1.0,
+        saturation: (json['saturation'] as num?)?.toDouble() ?? 1.0,
+        sharpen: (json['sharpen'] as num?)?.toDouble() ?? 0.0
+      ),
+
+      paletteBias: PaletteBias(
+        black: (json['blackBias'] as num?)?.toDouble() ?? 1.0,
+        white: (json['whiteBias'] as num?)?.toDouble() ?? 1.0,
+        red: (json['redBias'] as num?)?.toDouble() ?? 1.0,
+        yellow: (json['yellowBias'] as num?)?.toDouble() ?? 1.0
       ),
 
       dither: DitherMode.values.firstWhere(
@@ -215,7 +236,7 @@ class SlotMetadataDefaults {
       type: SlotContentType.empty,
       syncState: SlotSyncState.clean,
       pendingAction: SlotPendingAction.none,
-      adjustments: const ImageAdjustments(brightness: 0.0, contrast: 1.0),
+      adjustments: ImageAdjustments(),
       dither: DitherMode.atkinson,
       fit: FitStrategy.crop,
       filter: ImageFilter.normal

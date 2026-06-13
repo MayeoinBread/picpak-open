@@ -9,6 +9,7 @@ import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
 import 'package:picpak_open/app/widgets/controls/dithering_controls.dart';
 import 'package:picpak_open/app/widgets/controls/image_adjustment_controls.dart';
+import 'package:picpak_open/app/widgets/controls/palette_bias_controls.dart';
 import 'package:picpak_open/app/widgets/controls/processing_options_panel.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
@@ -44,7 +45,8 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
 
   // Image Adjustments/Dithering, etc.
   DitherMode algorithm = DitherMode.atkinson;
-  ImageAdjustments adjustments = ImageAdjustments(brightness: 0.0, contrast: 1.0);
+  ImageAdjustments adjustments = ImageAdjustments();
+  PaletteBias paletteBias = PaletteBias();
   FitStrategy _fitStrategy = FitStrategy.crop;
   ImageFilter _filter = ImageFilter.normal;
   bool _simulateDeviceScreen = false;
@@ -136,7 +138,8 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
       filter: _filter,
       simulateDevice: _simulateDeviceScreen,
       fit: _fitStrategy,
-      adjustments: adjustments
+      adjustments: adjustments,
+      paletteBias: paletteBias
     );
 
     if (version != _processVersion) return;
@@ -150,7 +153,8 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
       filter: _filter,
       simulateDevice: _simulateDeviceScreen,
       fit: _fitStrategy,
-      adjustments: adjustments
+      adjustments: adjustments,
+      paletteBias: paletteBias
     );
 
     final thumbnail = ThumbnailService.createFromBytes(pipeline.previewBytes!);
@@ -175,6 +179,17 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
     widget.onSaved(metadata, thumbnail);
 
     Navigator.pop(context);
+  }
+
+  Future<void> _autoEnhance() async {
+    final image = pipeline.sourceImage;
+    if (image == null) return;
+    final metrics = ImageMetrics.analyseImage(image);
+    final suggested = ImageAdjustments.autoEnhance(metrics);
+    setState(() {
+      adjustments = suggested;
+    });
+    await _reprocess();
   }
 
   @override
@@ -224,12 +239,28 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
                       await _reprocess();
                     },
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.diamond_sharp),
+                    onPressed: () async {
+                      await _autoEnhance();
+                    }
+                  ),
                   const SizedBox(height: 8),
                   ImageAdjustmentControls(
                     adjustments: adjustments,
                     onChanged: (newAdjustments) async {
                       setState(() {
                         adjustments = newAdjustments;
+                      });
+                      _reprocess();
+                    }
+                  ),
+                  const SizedBox(height: 8),
+                  PaletteBiasControls(
+                    paletteBias: paletteBias,
+                    onChanged: (newBias) async {
+                      setState(() {
+                        paletteBias = newBias;
                       });
                       _reprocess();
                     }

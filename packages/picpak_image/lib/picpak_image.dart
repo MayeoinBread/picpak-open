@@ -13,3 +13,5 @@ export 'src/pipeline/pipeline_result.dart';
 export 'src/pipeline/pipeline_isolate.dart';
 export 'src/encoding/framebuffer_packer.dart';
 export 'src/encoding/framebuffer_decoder.dart';
+export 'src/pipeline/palette_bias.dart';
+export 'src/models/image_metrics.dart';
