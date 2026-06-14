@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:picpak_image/picpak_image.dart';
 
-class DitheringControls extends StatelessWidget {
-  final DitherMode selectedAlgorithm;
+class FilterControls extends StatelessWidget {
+  final ImageFilter selectedFilter;
 
-  final ValueChanged<DitherMode> onAlgorithmChanged;
+  final ValueChanged<ImageFilter> onFilterChanged;
 
-  const DitheringControls({
+  const FilterControls({
     super.key,
-    required this.selectedAlgorithm,
-    required this.onAlgorithmChanged
+    required this.selectedFilter,
+    required this.onFilterChanged
   });
 
   @override
@@ -22,23 +22,26 @@ class DitheringControls extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Dithering', style: Theme.of(context).textTheme.titleMedium),
+              Text('Filters', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
+
+              // Filters
+              // Chip list
               Wrap(
                 spacing: 8,
                 runSpacing: 8,
-                children: DitherMode.values.map((dither) {
-                  final selected = dither == selectedAlgorithm;
+                children: ImageFilter.values.map((filter) {
+                  final selected = filter == selectedFilter;
                   return ChoiceChip(
-                    label: Text(dither.name),
+                    label: Text(filter.name),
                     selected: selected,
                     showCheckmark: false,
                     onSelected: (_) {
-                      onAlgorithmChanged(dither);
+                      onFilterChanged(filter);
                     },
                   );
                 }).toList(),
-              ),
+              )
             ],
           )
         )

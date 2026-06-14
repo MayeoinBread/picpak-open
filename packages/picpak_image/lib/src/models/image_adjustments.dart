@@ -25,6 +25,10 @@ class ImageAdjustments {
   // 5-8 -> ???
   final double toneLevels;
 
+  final double halftoneScale;
+  final double hatchDensity;
+  final double sketchStrength;
+
   const ImageAdjustments({
     this.brightness = 0.0,
     this.contrast = 1.0,
@@ -32,7 +36,10 @@ class ImageAdjustments {
     this.sharpen = 0.0,
     this.comicStrength = 1.0,
     this.inkThickness = 0.0,
-    this.toneLevels = 2.0
+    this.toneLevels = 2.0,
+    this.halftoneScale = 6,
+    this.hatchDensity = 8.0,
+    this.sketchStrength = 1.0
   });
 
   ImageAdjustments copyWith({
@@ -42,7 +49,10 @@ class ImageAdjustments {
     double? sharpen,
     double? comicStrength,
     double? inkThickness,
-    double? toneLevels
+    double? toneLevels,
+    double? halftoneScale,
+    double? hatchDensity,
+    double? sketchStrength
   }) {
     return ImageAdjustments(
       brightness: brightness ?? this.brightness,
@@ -51,7 +61,10 @@ class ImageAdjustments {
       sharpen: sharpen ?? this.sharpen,
       comicStrength: comicStrength ?? this.comicStrength,
       inkThickness: inkThickness ?? this.inkThickness,
-      toneLevels: toneLevels ?? this.toneLevels
+      toneLevels: toneLevels ?? this.toneLevels,
+      halftoneScale: halftoneScale ?? this.halftoneScale,
+      hatchDensity: hatchDensity ?? this.hatchDensity,
+      sketchStrength: sketchStrength ?? this.sketchStrength
     );
   }
 

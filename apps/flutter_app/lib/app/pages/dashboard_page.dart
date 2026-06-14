@@ -11,7 +11,7 @@ import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
 import 'package:picpak_open/app/widgets/controls/dithering_controls.dart';
 import 'package:picpak_open/app/widgets/controls/image_adjustment_controls.dart';
-import 'package:picpak_open/app/widgets/controls/processing_options_panel.dart';
+import 'package:picpak_open/app/widgets/controls/filter_controls.dart';
 import 'package:picpak_open/app/widgets/device/device_actions_panel.dart';
 import 'package:picpak_open/app/widgets/device/device_info_card.dart';
 import 'package:image/image.dart' as img;
@@ -306,7 +306,6 @@ class _DashboardPageState extends State<DashboardPage> {
                     const SizedBox(height: 8),
                     ImageAdjustmentControls(
                       adjustments: adjustments,
-                      filter: _filter,
                       onChanged: (newAdjustments) async {
                         setState(() {
                           adjustments = newAdjustments;
@@ -316,25 +315,11 @@ class _DashboardPageState extends State<DashboardPage> {
                       }
                     ),
                     const SizedBox(height: 8),
-                    ProcessingOptionsPanel(
+                    FilterControls(
                       selectedFilter: _filter,
-                      fitStrategy: _fitStrategy,
-                      simulateDevice: _simulateDeviceScreen,
                       onFilterChanged: (filter) async {
                         setState(() {
                           _filter = filter;
-                        });
-                        _reprocess();
-                      },
-                      onFitChanged: (fit) async {
-                        setState(() {
-                          _fitStrategy = fit;
-                        });
-                        _reprocess();
-                      },
-                      onSimulateChanged: (simulate) async {
-                        setState(() {
-                          _simulateDeviceScreen = simulate;
                         });
                         _reprocess();
                       }

@@ -8,7 +8,7 @@ import '../palette/palette_mapper.dart';
 import 'dither_engine.dart';
 
 class SierraDither implements DitherEngine {
-  String get name => "Sierra Lite";
+  String get name => "Sierra";
 
   @override
   PaletteFramebuffer apply(img.Image image, PaletteBias bias) {

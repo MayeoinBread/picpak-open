@@ -4,5 +4,8 @@ enum ImageFilter {
   grayscale,
   highContrast,
   posterise,
-  comic
+  comic,
+  halftone,
+  crossHatch,
+  pencilSketch
 }

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:image/image.dart' as img;
@@ -16,9 +17,189 @@ class ImageFilterProcessor {
       case ImageFilter.comic:
         return _comic(input, adjustments);
       
+      case ImageFilter.halftone:
+        return _halftone(input, adjustments.halftoneScale);
+
+      case ImageFilter.crossHatch:
+        return _crossHatch(input, adjustments.hatchDensity);
+      
+      case ImageFilter.pencilSketch:
+        return _pencilSketch(input, adjustments.sketchStrength);
+      
       default:
         return _perPixelFilter(input, filter);
     }
+  }
+
+  static img.Image _pencilSketch(
+    img.Image input, double strength
+  ) {
+    final width = input.width;
+    final height = input.height;
+
+    final out = img.Image.from(input);
+
+    // grayscale buffer
+    final gray = List.generate(
+      height,
+      (_) => List<double>.filled(width, 0),
+    );
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final p = input.getPixel(x, y);
+        gray[y][x] = (0.299 * p.r + 0.587 * p.g + 0.114 * p.b);
+      }
+    }
+
+    int clampi(double v) => v.clamp(0, 255).toInt();
+
+    for (int y = 1; y < height - 1; y++) {
+      for (int x = 1; x < width - 1; x++) {
+        final gx =
+            -gray[y - 1][x - 1] -
+            2 * gray[y][x - 1] -
+            gray[y + 1][x - 1] +
+            gray[y - 1][x + 1] +
+            2 * gray[y][x + 1] +
+            gray[y + 1][x + 1];
+
+        final gy =
+            -gray[y - 1][x - 1] -
+            2 * gray[y - 1][x] -
+            gray[y - 1][x + 1] +
+            gray[y + 1][x - 1] +
+            2 * gray[y + 1][x] +
+            gray[y + 1][x + 1];
+
+        final magnitude = math.sqrt(gx * gx + gy * gy);
+
+        // edge strength
+        double edge = magnitude / 255.0;
+        edge = (edge * strength).clamp(0.0, 1.0);
+
+        // invert: edges become dark pencil strokes
+        final base = gray[y][x];
+
+        final sketch = 255 - (edge * 255);
+
+        // blend base + sketch
+        final finalVal = (base * 0.4 + sketch * 0.6);
+
+        final v = clampi(finalVal);
+
+        out.setPixelRgb(x, y, v, v, v);
+      }
+    }
+
+    return out;
+  }
+
+  static img.Image _crossHatch(img.Image input, double density) {
+    final out = img.Image.from(input);
+
+    final width = out.width;
+    final height = out.height;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final p = out.getPixel(x, y);
+
+        final r = p.r.toDouble();
+        final g = p.g.toDouble();
+        final b = p.b.toDouble();
+
+        final lum = (0.299 * r + 0.587 * g + 0.114 * b);
+
+        // normalize 0..1
+        final l = lum / 255.0;
+
+        // base thresholds
+        final t1 = 0.25;
+        final t2 = 0.5;
+        final t3 = 0.75;
+
+        int value = 255;
+
+        // basic tone bands
+        if (l < t3) {
+          // diagonal hatch /
+          if (((x + y) % (density.round())) == 0) {
+            value = 0;
+          }
+        }
+
+        if (l < t2) {
+          // opposite hatch \
+          if (((x - y) % (density.round())) == 0) {
+            value = 0;
+          }
+        }
+
+        if (l < t1) {
+          // dense cross hatch
+          if (x % (density ~/ 2 == 0 ? 1 : density ~/ 2) == 0 &&
+              y % (density ~/ 2 == 0 ? 1 : density ~/ 2) == 0) {
+            value = 0;
+          }
+        }
+
+        out.setPixelRgb(x, y, value, value, value);
+      }
+    }
+
+    return out;
+  }
+
+  static img.Image _halftone(img.Image input, double density) {
+    final out = img.Image.from(input);
+
+    final width = out.width;
+    final height = out.height;
+
+    for (int y=0; y<height; y++) {
+      for (int x=0; x<width; x++) {
+        final p = out.getPixel(x, y);
+
+        final r = p.r.toDouble();
+        final g = p.g.toDouble();
+        final b = p.b.toDouble();
+
+        final luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+
+        // invert so dark = bigger dots
+        final intensity = 1.0 - luminance;
+
+        // cell coordinates
+        final cx = (x / density).floor();
+        final cy = (y / density).floor();
+
+        final fx = (x / density) - cx;
+        final fy = (y / density) - cy;
+
+        // simple dot pattern (center-based)
+        final dx = fx - 0.5;
+        final dy = fy - 0.5;
+
+        final dist = dx * dx + dy * dy;
+
+        // threshold radius based on brightness
+        final radius = intensity * 0.25;
+
+        final isDot = dist < radius * radius;
+
+        int value;
+        if (isDot) {
+          value = 0;
+        } else {
+          value = 255;
+        }
+
+        out.setPixelRgb(x, y, value, value, value);
+      }
+    }
+
+    return out;
   }
 
   static img.Image _perPixelFilter(img.Image input, ImageFilter filter) {

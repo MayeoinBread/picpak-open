@@ -158,6 +158,9 @@ class SlotMetadata {
       'comicStrength': adjustments.comicStrength,
       'inkThickness': adjustments.inkThickness,
       'toneLevels': adjustments.toneLevels,
+      'halftoneScale': adjustments.halftoneScale,
+      'hatchDensity': adjustments.hatchDensity,
+      'sketchStrength': adjustments.sketchStrength,
 
       'blackBias': paletteBias.black,
       'whiteBias': paletteBias.white,
@@ -206,7 +209,10 @@ class SlotMetadata {
         sharpen: (json['sharpen'] as num?)?.toDouble() ?? 0.0,
         comicStrength: (json['comicStrength'] as num?)?.toDouble() ?? 1.0,
         inkThickness: (json['inkThickness'] as num?)?.toDouble() ?? 0.0,
-        toneLevels: (json['toneLevels'] as num?)?.toDouble() ?? 2.0
+        toneLevels: (json['toneLevels'] as num?)?.toDouble() ?? 2.0,
+        halftoneScale: (json['halftoneScale'] as num?)?.toDouble() ?? 6.0,
+        hatchDensity: (json['hatchDensity'] as num?)?.toDouble() ?? 8.0,
+        sketchStrength: (json['sketchStrength'] as num?)?.toDouble() ?? 1.0
       ),
 
       paletteBias: PaletteBias(

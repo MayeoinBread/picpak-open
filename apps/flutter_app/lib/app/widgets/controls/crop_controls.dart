@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:picpak_image/picpak_image.dart';
 
-class DitheringControls extends StatelessWidget {
-  final DitherMode selectedAlgorithm;
+class CropControls extends StatelessWidget {
+  final FitStrategy fitStrategy;
 
-  final ValueChanged<DitherMode> onAlgorithmChanged;
+  final ValueChanged<FitStrategy> onFitChanged;
 
-  const DitheringControls({
+  const CropControls({
     super.key,
-    required this.selectedAlgorithm,
-    required this.onAlgorithmChanged
+    required this.fitStrategy,
+    required this.onFitChanged
   });
 
   @override
   Widget build(BuildContext context) {
+
     return SizedBox(
       width: double.infinity,
       child: Card(
@@ -22,23 +23,22 @@ class DitheringControls extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Dithering', style: Theme.of(context).textTheme.titleMedium),
+              Text('Crop Options', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: DitherMode.values.map((dither) {
-                  final selected = dither == selectedAlgorithm;
+                spacing: 8, runSpacing: 8,
+                children: FitStrategy.values.map((fit) {
+                  final selected = fit == fitStrategy;
                   return ChoiceChip(
-                    label: Text(dither.name),
+                    label: Text(fit.name),
                     selected: selected,
                     showCheckmark: false,
                     onSelected: (_) {
-                      onAlgorithmChanged(dither);
-                    },
+                      onFitChanged(fit);
+                    }
                   );
                 }).toList(),
-              ),
+              )
             ],
           )
         )

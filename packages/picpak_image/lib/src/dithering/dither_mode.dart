@@ -4,7 +4,9 @@ enum DitherMode {
   atkinson,
   ordered,
   sierra,
+  sierraLite,
   burkes,
   jjn,
-  stucki
+  stucki,
+  adaptiveAtkinson
 }
