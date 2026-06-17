@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:picpak_open/app/data/models/editor_result.dart';
+import 'package:picpak_open/app/services/image_pipeline_controller.dart';
 import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
@@ -12,8 +14,7 @@ class QrCodeTab extends StatefulWidget {
   final LibraryItem item;
 
   final void Function(
-    SlotMetadata metadata,
-    Uint8List thumbnailBytes
+    EditorResult editorResult
   ) onSaved;
 
   const QrCodeTab({
@@ -36,6 +37,8 @@ class _QrCodeTabState extends State<QrCodeTab> {
   String securityType = 'WPA';
 
   Uint8List? previewBytes;
+
+  final ImagePipelineController pipeline = ImagePipelineController();
 
   @override
   void initState() {
@@ -86,12 +89,12 @@ class _QrCodeTabState extends State<QrCodeTab> {
     });
   }
 
-  void _save() {
+  void _save() async {
     final image = QrRenderer.render(
       data: _generatePayloadString()
     );
 
-    final thumbnail = ThumbnailService.createFromImage(image);
+    previewBytes = Uint8List.fromList(img.encodePng(image));
 
     final metadata = SlotMetadata(
       type: SlotContentType.qr,
@@ -103,9 +106,18 @@ class _QrCodeTabState extends State<QrCodeTab> {
       wifiSecurity: (qrType == QrType.wifi) ? securityType : null,
     );
 
-    widget.onSaved(metadata, thumbnail);
+    await pipeline.prepare(previewBytes!, FitStrategy.crop, null);
+    await pipeline.processMetadata(metadata: metadata);
+    final packedBytes = FramebufferPacker.pack(pipeline.framebuffer!);
 
-    Navigator.pop(context);
+    final edRes = EditorResult(
+      metadata: metadata,
+      originalBytes: null,
+      previewBytes: previewBytes!,
+      packedBytes: packedBytes
+    );
+
+    widget.onSaved(edRes);
   }
 
   @override
@@ -183,7 +195,13 @@ class _QrCodeTabState extends State<QrCodeTab> {
                     children: [
                       ElevatedButton(onPressed: _generatePreview, child: const Text('Preview')),
                       const SizedBox(width:8),
-                      ElevatedButton(onPressed: _save, child: const Text('Save'))
+                      ElevatedButton(
+                        onPressed: () async {
+                          _save();
+                          Navigator.pop(context);
+                        },
+                        child: const Text('Save')
+                      )
                     ]
                   )
                 ]

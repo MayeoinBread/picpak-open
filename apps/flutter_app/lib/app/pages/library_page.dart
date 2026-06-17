@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:picpak_open/app/controller/library_controller.dart';
+import 'package:picpak_open/app/repositories/image_repository.dart';
 import 'package:picpak_open/app/repositories/slot_repository.dart';
 import 'package:picpak_open/app/services/ble_service.dart';
 import 'package:picpak_open/app/services/device_session_service.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
+import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/app/widgets/library/library_grid.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
@@ -50,14 +54,6 @@ class _LibraryPageState extends State<LibraryPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       controller.loadFromDatabase();
     });
-
-    // ble.onDeleteAck = (slot) async {
-    //   final empty = SlotMetadataDefaults.empty(slot);
-    //   controller.updateSlot(slot: slot, exists: false, thumbnailBytes: null, metadata: empty);
-    //   controller.updateMetadata(slot, empty);
-    //   await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: empty);
-    //   setState((){});
-    // };
   }
 
   @override
@@ -72,13 +68,22 @@ class _LibraryPageState extends State<LibraryPage> {
       ble: ble,
       session: session,
       availableSlots: session.state.availableSlots,
-      onSlotReady: (slot, thumb) {
+      onSlotReady: (slot, isDirty) async {
+        final newMetadata = controller.items[slot]!.metadata.copyWith(
+          pendingAction: isDirty
+            ? SlotPendingAction.upload
+            : SlotPendingAction.none
+        );
         controller.updateSlot(
           slot: slot,
           exists: true,
-          thumbnailBytes: thumb,
-          metadata: const SlotMetadata(type: SlotContentType.image)
+          metadata: newMetadata
         );
+        await SlotRepository().saveSlot(
+            slot: slot,
+            imageId: newMetadata.imageId,
+            metadata: newMetadata
+          );
       }
     );
   }
@@ -89,26 +94,50 @@ class _LibraryPageState extends State<LibraryPage> {
     await showDialog(
       context: context,
       builder: (_) => ContentEditorDialog(
-        item: item,
-        onSaved: (metadata, thumbnail) async {
+        item: item!,
+        onSaved: (editorResult) async {
           debugPrint('SAVE slot=$slot');
           final mslot = slot;
+
+          final previewHash = sha256.convert(editorResult.packedBytes).toString();
+
+          if (item.exists) {
+            final existingImage = await ImageRepository().getImage(item.metadata.imageId!);
+            if (previewHash == existingImage?.deviceHash){
+              debugPrint("Hashes are equal, no changes to image");
+              return;
+            }
+          }
 
           setState(() {
             selectedSlot = null;
           });
 
+          final thumbnail = ThumbnailService.createFromBytes(editorResult.previewBytes);
+    
+          final image = await ImageRepository().storeImage(
+            originalBytes: editorResult.originalBytes,
+            thumbnailBytes: thumbnail,
+            packedBytes: editorResult.packedBytes
+          );
+
+          final newMetadata = editorResult.metadata.copyWith(
+            imageId: image.id,
+            syncState: SlotSyncState.uploading,
+            pendingAction: SlotPendingAction.upload
+          );
+
           controller.updateSlot(
             slot: mslot,
             exists: true,
             thumbnailBytes: thumbnail,
-            metadata: metadata
+            metadata: newMetadata
           );
 
           await SlotRepository().saveSlot(
             slot: slot,
-            imageId: metadata.imageId,
-            metadata: metadata
+            imageId: image.id,
+            metadata: newMetadata
           );
         }
       )
@@ -117,7 +146,7 @@ class _LibraryPageState extends State<LibraryPage> {
 
   Future<void> _onDelete(int slot) async {
     final item = controller.items[slot];
-    final metadata = item.metadata;
+    final metadata = item!.metadata;
 
     final newAction = metadata.pendingAction == SlotPendingAction.delete
         ? SlotPendingAction.none
@@ -138,32 +167,42 @@ class _LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('Library build selected=$selectedSlot items=${controller.items.length}');
-    // return AnimatedBuilder(
-      // animation: controller,
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        final items = List<LibraryItem>.from(controller.items);
+        final slots = controller.items.keys.toList()..sort();
+        final items = slots.map((s) => controller.items[s]!).toList();
         return Row(
           children: [
-
-            ElevatedButton(
-              onPressed: (() async {
-                await controller.pushToDevice(ble: ble, session: session);
-              }),
-              child: const Text("Push Updates")
-            ),
-
             SizedBox(
-              width: 300,
-              child: ExcludeSemantics(
-                child: SlotInspector(
-                  onSync: _sync,
-                  item: selectedSlot == null
-                    ? null
-                    : controller.items[selectedSlot!]
-                ),
+              width: 200,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  SlotInspector(
+                    onSync: _sync,
+                    item: selectedSlot == null
+                      ? null
+                      : controller.items[selectedSlot!]
+                  ),
+                  ElevatedButton(
+                    onPressed: (() async {
+                      await controller.pushToDevice(ble: ble, session: session);
+                    }),
+                    child: const Text("Push Updates")
+                  ),
+                  ElevatedButton(
+                    onPressed: (() async {
+                      final deleted = await ImageRepository().cleanupUnusedImages();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Deleted $deleted unused images'))
+                        );
+                      }
+                    }),
+                    child: const Text("Cleanup Storage")
+                  ),
+                ],
               ),
             ),
 
@@ -171,8 +210,7 @@ class _LibraryPageState extends State<LibraryPage> {
               child: Padding(
                 padding: const EdgeInsets.all(16),
                 child: LibraryGrid(
-                  // items: controller.items,
-                  items: items,
+                  items: controller.items,
                   selectedSlot: selectedSlot,
                   onSelected: (slot) {
                     setState(() {

@@ -1,6 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:picpak_open/app/data/models/editor_result.dart';
+import 'package:picpak_open/app/services/image_pipeline_controller.dart';
 import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
@@ -13,8 +15,7 @@ class NoteEditorTab extends StatefulWidget {
   final LibraryItem item;
 
   final void Function(
-    SlotMetadata metadata,
-    Uint8List thumbnailBytes
+    EditorResult editorResult
   ) onSaved;
 
   const NoteEditorTab({
@@ -31,6 +32,8 @@ class _NoteEditorTabState extends State<NoteEditorTab> {
   late final TextEditingController textController;
 
   Uint8List? previewBytes;
+
+  final ImagePipelineController pipeline = ImagePipelineController();
 
   @override
   void initState() {
@@ -52,24 +55,34 @@ class _NoteEditorTabState extends State<NoteEditorTab> {
     });
   }
 
-  void _save() {
+  void _save() async {
     final image = NoteRenderer.render(
       text: textController.text,
       w: DeviceConstants.imageWidth,
       h: DeviceConstants.imageHeight
     );
 
-    final thumbnail = ThumbnailService.createFromImage(image);
+    previewBytes = Uint8List.fromList(img.encodePng(image));
 
     final metadata = SlotMetadata(
       type: SlotContentType.note,
-      pendingAction: SlotPendingAction.upload,
+      pendingAction: SlotPendingAction.verifyHash,
       text: textController.text
     );
 
-    widget.onSaved(metadata, thumbnail);
+    await pipeline.prepare(previewBytes!, FitStrategy.crop, null);
+    await pipeline.processMetadata(metadata: metadata);
 
-    Navigator.pop(context);
+    final packedBytes = FramebufferPacker.pack(pipeline.framebuffer!);
+
+    final edRes = EditorResult(
+      metadata: metadata,
+      originalBytes: null,
+      previewBytes: previewBytes!,
+      packedBytes: packedBytes
+    );
+
+    widget.onSaved(edRes);
   }
 
   @override
@@ -97,7 +110,13 @@ class _NoteEditorTabState extends State<NoteEditorTab> {
                   children: [
                     ElevatedButton(onPressed: _generatePreview, child: const Text('Preview')),
                     const SizedBox(width: 8),
-                    ElevatedButton(onPressed: _save, child: const Text('Save'))
+                    ElevatedButton(
+                      onPressed: () async {
+                        _save();
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Save')
+                    )
                   ]
                 )
               ]

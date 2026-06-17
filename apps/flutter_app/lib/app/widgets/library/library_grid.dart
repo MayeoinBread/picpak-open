@@ -4,7 +4,7 @@ import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'slot_tile.dart';
 
 class LibraryGrid extends StatelessWidget {
-  final List<LibraryItem> items;
+  final Map<int, LibraryItem> items;
   final int? selectedSlot;
   final ValueChanged<int> onSelected;
 
@@ -22,60 +22,34 @@ class LibraryGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('LibraryGrid build'
-    'items-${items.length}'
-    'selected-$selectedSlot');
-    // return GridView.builder(
-    //   itemCount: items.length,
-    //   gridDelegate:
-    //       const SliverGridDelegateWithFixedCrossAxisCount(
-    //     crossAxisCount: 5,
-    //     crossAxisSpacing: 8,
-    //     mainAxisSpacing: 8,
-    //     childAspectRatio: 1.0
-    //   ),
-    //   itemBuilder: (context, index) {
-
-    //     final item = items[index];
-
-    //     return SlotTile(
-    //       key: ValueKey(item.slot),
-    //       thumbnail: item.thumbnailBytes,
-    //       exists: item.exists,
-    //       selected: selectedSlot == item.slot,
-    //       metadata: item.metadata,
-    //       onTap: () => onSelected(item.slot),
-    //       onEdit: () => onEdit(item.slot),
-    //       onDelete: () => onDelete(item.slot)
-    //     );
-    //   },
-    // );
     return LayoutBuilder(
       builder: (context, constraints) {
         final itemSize = 120.0;
+
+        final slots = items.keys.toList()..sort();
 
         return SingleChildScrollView(
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: List.generate(items.length, (index) {
-              final item = items[index];
+            children: slots.map((slot) {
+              final item = items[slot]!;
 
               return SizedBox(
                 width: itemSize,
                 height: itemSize,
                 child: SlotTile(
-                  key: ValueKey(item.slot),
+                  key: ValueKey(slot),
                   thumbnail: item.thumbnailBytes,
                   exists: item.exists,
-                  selected: selectedSlot == item.slot,
+                  selected: selectedSlot == slot,
                   metadata: item.metadata,
-                  onTap: () => onSelected(item.slot),
-                  onEdit: () => onEdit(item.slot),
-                  onDelete: () => onDelete(item.slot),
+                  onTap: () => onSelected(slot),
+                  onEdit: () => onEdit(slot),
+                  onDelete: () => onDelete(slot),
                 )
               );
-            })
+            }).toList()
           )
         );
       }

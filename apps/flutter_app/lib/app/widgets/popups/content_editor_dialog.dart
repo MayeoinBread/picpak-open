@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:picpak_open/app/data/models/editor_result.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
 import 'package:picpak_open/app/widgets/popups/image_editor_tab.dart';
@@ -11,8 +12,7 @@ class ContentEditorDialog extends StatelessWidget {
   final LibraryItem item;
 
   final void Function(
-    SlotMetadata metadata,
-    Uint8List thumbnailBytes
+    EditorResult editorResult
   ) onSaved;
 
   const ContentEditorDialog({

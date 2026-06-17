@@ -27,12 +27,12 @@ class SlotRepository {
     );
   }
 
-  Future<List<LibraryItem>> loadLibrary() async {
+  Future<Map<int, LibraryItem>> loadLibrary() async {
     final database = await db.database;
 
     final slotRows = await database.query('slots', orderBy: 'slot');
 
-    final items = <LibraryItem>[];
+    final items = <int, LibraryItem>{};
 
     for (final row in slotRows) {
       final slot = row['slot'] as int;
@@ -59,7 +59,12 @@ class SlotRepository {
         }
       }
 
-      items.add(LibraryItem(slot: slot, exists: exists, thumbnailBytes: thumbnailBytes, metadata: metadata));
+      items[slot] = LibraryItem(
+        slot: slot,
+        exists: exists,
+        thumbnailBytes: thumbnailBytes,
+        metadata: metadata
+      );
     }
 
     return items;

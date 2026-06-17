@@ -13,10 +13,10 @@ import 'package:uuid/uuid.dart';
 class ImageRepository {
   final db = DatabaseService.instance;
 
-  Future<StoredImage> importImage({
-    required Uint8List originalBytes,
+  Future<StoredImage> storeImage({
+    required Uint8List? originalBytes,
     required Uint8List thumbnailBytes,
-    required PaletteFramebuffer framebuffer
+    required Uint8List packedBytes
   }) async {
     final id = const Uuid().v4();
 
@@ -25,18 +25,20 @@ class ImageRepository {
     final imageDir = Directory(join(appDir.path, 'images', id));
     await imageDir.create(recursive: true);
 
-    final originalPath = join(imageDir.path, 'original.png');
     final thumbnailPath = join(imageDir.path, 'thumb.png');
     final processedPath = join(imageDir.path, 'processed.bin');
 
-    await File(originalPath).writeAsBytes(originalBytes);
+    String originalPath = "N/A";
+    String sourceHash = "N/A";
+    if (originalBytes != null) {
+      originalPath = join(imageDir.path, 'original.png');
+      await File(originalPath).writeAsBytes(originalBytes);
+      sourceHash = sha256.convert(originalBytes).toString();
+    }
     await File(thumbnailPath).writeAsBytes(thumbnailBytes);
 
-    final packed = FramebufferPacker.pack(framebuffer);
-    await File(processedPath).writeAsBytes(packed);
-    final deviceHash = sha256.convert(packed).toString();
-
-    final sourceHash = sha256.convert(originalBytes).toString();
+    await File(processedPath).writeAsBytes(packedBytes);
+    final deviceHash = sha256.convert(packedBytes).toString();
 
     final image = StoredImage(
       id: id,
@@ -81,6 +83,8 @@ class ImageRepository {
 
     if (image == null) return null;
 
+    if (image.originalPath == "N/A") return null;
+
     return File(image.originalPath).readAsBytes();
   }
 
@@ -92,5 +96,42 @@ class ImageRepository {
     if (image == null) return null;
 
     return File(image.processedPath).readAsBytes();
+  }
+
+  Future<int> cleanupUnusedImages() async {
+    final database = await db.database;
+
+    final rows = await database.query(
+      'slots',
+      columns: ['image_id']
+    );
+
+    final referenceIds = rows.map((e) => e['image_id'] as String?).whereType<String>().toSet();
+
+    final appDir = await getApplicationSupportDirectory();
+    final imagesDir = Directory(join(appDir.path, 'images'));
+
+    if (!await imagesDir.exists()) return 0;
+
+    int deleted = 0;
+
+    await for (final entity in imagesDir.list()) {
+      if (entity is! Directory) continue;
+
+      final id = basename(entity.path);
+      if (!referenceIds.contains(id)) {
+        await entity.delete(recursive: true);
+
+        await database.delete(
+          'images',
+          where: 'id = ?',
+          whereArgs: [id]
+        );
+
+        deleted++;
+      }
+    }
+
+    return deleted;
   }
 }

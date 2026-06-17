@@ -53,7 +53,12 @@ class _PicPakAppState extends State<PicPakApp> {
       darkTheme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.dark,
-        colorSchemeSeed: Color.fromARGB(255, 0, 127, 255)
+        colorSchemeSeed: Color.fromARGB(255, 0, 127, 255),
+        snackBarTheme: const SnackBarThemeData(
+          backgroundColor: Color(0xFF323232),
+          contentTextStyle: TextStyle(color: Colors.white),
+          actionTextColor: Colors.lightBlueAccent
+        )
       ),
 
       builder: (context, child) {

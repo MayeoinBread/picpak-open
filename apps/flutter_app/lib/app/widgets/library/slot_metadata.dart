@@ -18,7 +18,8 @@ enum SlotSyncState {
 enum SlotPendingAction {
   none,
   delete,
-  upload
+  upload,
+  verifyHash
 }
 
 class SlotStatusIndicator {
@@ -40,6 +41,7 @@ SlotStatusIndicator? getStatusIndicator(SlotMetadata metadata) {
     case SlotPendingAction.upload:
       return const SlotStatusIndicator(icon: Icons.cloud_upload_outlined, colour: Colors.orange, size: 36);
     case SlotPendingAction.none:
+    case SlotPendingAction.verifyHash:
       break;
   }
 

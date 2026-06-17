@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:picpak_open/app/data/models/editor_result.dart';
 import 'package:picpak_open/app/repositories/image_repository.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
 import 'package:picpak_open/app/services/thumbnail_service.dart';
@@ -21,8 +22,7 @@ class ImageEditorTab extends StatefulWidget {
   final LibraryItem item;
 
   final void Function(
-    SlotMetadata metadata,
-    Uint8List thumbnailBytes
+    EditorResult editorResult
   ) onSaved;
 
   const ImageEditorTab({
@@ -80,7 +80,6 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
     });
 
     _originalImageBytes = await ImageRepository().loadOriginalBytes(imageId);
-    debugPrint("bytes length: ${_originalImageBytes!.length}");
     if (_originalImageBytes == null) return;
 
     await pipeline.prepare(_originalImageBytes!, _fitStrategy, cropRect);
@@ -148,6 +147,7 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
   }
 
   void _save() async {
+    // Maybe we don't need this, but maybe we keep it just in case timing was an issue?
     await pipeline.process(
       dither: algorithm,
       filter: _filter,
@@ -157,28 +157,29 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
       paletteBias: paletteBias
     );
 
-    final thumbnail = ThumbnailService.createFromBytes(pipeline.previewBytes!);
-    
-    final image = await ImageRepository().importImage(
-      originalBytes: _originalImageBytes!,
-      framebuffer: pipeline.framebuffer!,
-      thumbnailBytes: thumbnail
-    );
+    final item = widget.item;
+    final metadata = item.metadata;
 
-    final metadata = SlotMetadata(
+    final retMetadata = SlotMetadata(
       type: SlotContentType.image,
-      pendingAction: SlotPendingAction.upload,
+      pendingAction: SlotPendingAction.verifyHash,
       adjustments: adjustments,
       dither: algorithm,
       fit: _fitStrategy,
       filter: _filter,
-      imageId: image.id,
+      imageId: metadata.imageId,
       cropRect: cropRect
     );
 
-    widget.onSaved(metadata, thumbnail);
+    final packedBytes = FramebufferPacker.pack(pipeline.framebuffer!);
 
-    Navigator.pop(context);
+    final res = EditorResult(
+      metadata: retMetadata,
+      originalBytes: _originalImageBytes!,
+      previewBytes: pipeline.previewBytes!,
+      packedBytes: packedBytes);
+
+    widget.onSaved(res);
   }
 
   Future<void> _autoEnhance() async {
@@ -336,7 +337,11 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
                   height: DeviceConstants.imageHeight,
                   imageBytes: pipeline.previewBytes
                 ),
-                ElevatedButton(onPressed: _save, child: const Text('Save'))
+                ElevatedButton(onPressed: () async {
+                  _save();
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'))
               ]
             )
           )
