@@ -116,6 +116,17 @@ class _DeviceActionsPanelState extends State<DeviceActionsPanel> {
           ]
         ),
 
+        const SizedBox(height: 8),
+
+        Container(
+          padding: EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Color.fromARGB(48, 255, 128, 0),
+            borderRadius: BorderRadius.circular(8)
+          ),
+          child: Text("Possible to set any duration, but actual usage not verified")
+        ),
+
         const SizedBox(height: 16),
 
         ElevatedButton(
