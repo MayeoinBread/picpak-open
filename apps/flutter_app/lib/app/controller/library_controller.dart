@@ -1,3 +1,4 @@
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_open/app/repositories/image_repository.dart';
@@ -15,7 +16,7 @@ class LibraryController extends ChangeNotifier {
 
   final SlotRepository repository = SlotRepository();
 
-  List<LibraryItem> items = [];
+  Map<int, LibraryItem> items = {};
 
   double progress = 0;
 
@@ -24,15 +25,13 @@ class LibraryController extends ChangeNotifier {
   void initialise(int slotCount) {
     items.clear();
 
-    for (int i = 0; i < slotCount; i++) {
-      items.add(
-        LibraryItem(
-          slot: i+1,
+    for (int i = 1; i <= slotCount; i++) {
+      items[i] = LibraryItem(
+          slot: i,
           exists: false,
           thumbnailBytes: null,
           metadata: SlotMetadata(type: SlotContentType.empty)
-        ),
-      );
+        );
     }
 
     notifyListeners();
@@ -44,7 +43,8 @@ class LibraryController extends ChangeNotifier {
     Uint8List? thumbnailBytes,
     SlotMetadata? metadata
   }) {
-    items[slot] = items[slot].copyWith(
+    final current = items[slot]!;
+    items[slot] = current.copyWith(
       exists: exists,
       thumbnailBytes: thumbnailBytes,
       metadata: metadata
@@ -60,14 +60,14 @@ class LibraryController extends ChangeNotifier {
   }
 
   Future<List<LibraryItem>> getPendingItems() async {
-    return items.where((item) => item.metadata.pendingAction != SlotPendingAction.none).toList();
+    return items.values.where((item) => item.metadata.pendingAction != SlotPendingAction.none).toList();
   }
 
   Future<void> pullFromDevice({
     required BleManager ble,
     required DeviceSessionService session,
     required List<int> availableSlots,
-    required void Function(int slot, Uint8List thumbnail) onSlotReady
+    required void Function(int slot, bool isDirty) onSlotReady
   }) async {
     
     session.state = session.state.copyWith(
@@ -89,17 +89,20 @@ class LibraryController extends ChangeNotifier {
       );
 
       final deviceFramebuffer = await ble.downloadFramebuffer(slot);
+      final packed = FramebufferPacker.pack(deviceFramebuffer);
+      final deviceHash = sha256.convert(packed).toString();
 
-      // final smallFb = PaletteFramebuffer.downscale(framebuffer, 300, 300);
+      final imageId = items[slot]!.metadata.imageId;
+      String? localHash;
+      if (imageId != null) {
+        final stored = await ImageRepository().getImage(imageId);
+        localHash = stored?.deviceHash;
+      }
 
-      // final framebuffer = flipVertical(deviceFramebuffer);
-      final image = PanelRerender.renderFramebuffer(deviceFramebuffer);
-      final thumbnailBytes = ThumbnailService.createFromImage(image);
-      // final thumbnailBytes = Uint8List.fromList(img.encodePng(image));
-
-      debugPrint('Synced bytes: ${thumbnailBytes.length}');
+      final isDirty = localHash != deviceHash;
+      debugPrint('isDirty: $isDirty - app hash: $localHash - device hash: $deviceHash');
       
-      onSlotReady(slot - 1, thumbnailBytes);
+      onSlotReady(slot, isDirty);
     }
 
     session.state = session.state.copyWith(
@@ -122,7 +125,7 @@ class LibraryController extends ChangeNotifier {
         debugPrint("Deleting image");
         await ble.deleteImage(slot);
         await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: SlotMetadataDefaults.empty(slot));
-        items[slot] = items[slot].copyWith(exists: false, thumbnailBytes: null, metadata: SlotMetadataDefaults.empty(slot));
+        items[slot] = items[slot]!.copyWith(exists: false, thumbnailBytes: null, metadata: SlotMetadataDefaults.empty(slot));
         notifyListeners();
       } else if (dirtySlot.metadata.pendingAction == SlotPendingAction.upload) {
 
@@ -213,14 +216,18 @@ class LibraryController extends ChangeNotifier {
 
         final updated = dirtySlot.metadata.copyWith(syncState: SlotSyncState.clean, pendingAction: SlotPendingAction.none);
         await SlotRepository().saveSlot(slot: slot, imageId: imageId, metadata: updated);
-        items[slot] = items[slot].copyWith(metadata: updated);
+        final current = items[slot]!;
+        items[slot] = current.copyWith(metadata: updated);
         notifyListeners();
+
+        await Future.delayed(const Duration(seconds: 2));
       }
     }
   }
 
   void updateMetadata(int slot, SlotMetadata metadata) {
-    items[slot] = items[slot].copyWith(metadata: metadata);
+    final current = items[slot]!;
+    items[slot] = current.copyWith(metadata: metadata);
     notifyListeners();
   }
 }
