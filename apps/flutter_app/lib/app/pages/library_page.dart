@@ -155,6 +155,13 @@ class _LibraryPageState extends State<LibraryPage> {
               child: const Text("Push Updates")
             ),
 
+            ElevatedButton(
+              onPressed: (() async {
+                await ble.getHashForSlot(selectedSlot!);
+              }),
+              child: const Text("Check device hash")
+            ),
+
             SizedBox(
               width: 300,
               child: ExcludeSemantics(

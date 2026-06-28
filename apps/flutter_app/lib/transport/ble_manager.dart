@@ -7,9 +7,8 @@ import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/transport/ble_session.dart';
 import 'package:picpak_open/transport/device_info.dart';
 import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
-import 'package:picpak_image/src/pipeline/palette_framebuffer.dart';
-import 'package:picpak_image/src/encoding/framebuffer_decoder.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';
+import 'package:picpak_image/picpak_image.dart';
 
 class BleManager {
   final BleSession bleSession = BleSession();
@@ -22,8 +21,6 @@ class BleManager {
   ImageReadSession? _readSession;
 
   final session = DeviceSessionService.instance;
-
-  // Function(PaletteFramebuffer frameBuffer)? onImageDownloaded;
 
   final StreamController<PaletteFramebuffer> imageStream = StreamController.broadcast();
 
@@ -163,7 +160,9 @@ class BleManager {
       case 0x33:
         _handleDeleteAck(data);
         break;
-        // debugPrint("Delete ACK: $data");
+      case 0x04:
+        debugPrint("Data: $data");
+        debugPrint("0x04, data length: ${data.length}");
     }
   }
 
@@ -189,8 +188,6 @@ class BleManager {
         transfer: TransferState.uploading,
         progress: progress
       );
-      
-      // debugPrint("Upload percentage: $progress%");
       
       await Future.delayed(const Duration(milliseconds: 3));
     }
@@ -239,6 +236,13 @@ class BleManager {
     await ff01!.write([0xAA, 0x03, lo, hi, 0xFF]);
   }
 
+  Future<void> getHashForSlot(int slotNumber) async {
+    final lo = slotNumber & 0xFF;
+    final hi = (slotNumber >> 8) & 0xFF;
+
+    await ff01!.write([0xAA, 0x04, lo, hi, 0x02, 0xFF]);
+  }
+
   Future<PaletteFramebuffer> downloadFramebuffer(int slot) async {
     final completer = Completer<PaletteFramebuffer>();
 
@@ -257,17 +261,6 @@ class BleManager {
     await sub.cancel();
 
     return framebuffer;
-
-    // OLD
-    // debugPrint('Requesting slot $slot');
-    
-    // await getImageInSlot(slot);
-
-    // final fb = imageStream.stream.first;
-
-    // debugPrint('Received framebuffer for slot $slot');
-
-    // return fb;
   }
 
   DeviceInfo? _parseDeviceInfo(List<int> data) {
@@ -331,7 +324,6 @@ class BleManager {
 
       final framebuffer = FramebufferDecoder.decode(framebufferBytes);
       
-      // onImageDownloaded?.call(framebuffer);
       debugPrint('Framebuffer completed');
       imageStream.add(framebuffer);
 
