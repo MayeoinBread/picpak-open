@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:picpak_image/src/models/image_metrics.dart';
 
 class ImageAdjustments {

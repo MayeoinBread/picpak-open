@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/transport/ble_manager.dart';
 
@@ -27,6 +26,7 @@ class DashboardActions {
       );
 
       await ble.requestDeviceInfo();
+      await ble.requestDeviceSettings();
       await ble.imageList();
     } catch (e) {
       updateSession( (s) => s.copyWith(connection: ConnectionState.disconnected));

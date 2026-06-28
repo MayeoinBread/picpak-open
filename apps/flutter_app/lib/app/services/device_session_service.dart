@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart' hide ConnectionState;
+import 'package:picpak_open/app/data/models/device_settings.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
 
 class DeviceSessionService extends ValueNotifier<DeviceSessionState> {
@@ -14,7 +15,8 @@ class DeviceSessionService extends ValueNotifier<DeviceSessionState> {
     deviceName: 'Not Connected',
     batteryPercent: 0,
     firmware: '-',
-    availableSlots: const[]
+    availableSlots: const[],
+    settings: DeviceSettings(seconds: 3600, accelerometer: false)
   );
 
   DeviceSessionState get state => value;

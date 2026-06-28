@@ -171,7 +171,7 @@ class _LibraryPageState extends State<LibraryPage> {
         return Row(
           children: [
             SizedBox(
-              width: 200,
+              width: 300,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
@@ -183,7 +183,12 @@ class _LibraryPageState extends State<LibraryPage> {
                   ),
                   ElevatedButton(
                     onPressed: (() async {
-                      await controller.pushToDevice(ble: ble, session: session);
+                      final updateMessage = await controller.pushToDevice(ble: ble, session: session);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(updateMessage))
+                        );
+                      }
                     }),
                     child: const Text("Push Updates")
                   ),

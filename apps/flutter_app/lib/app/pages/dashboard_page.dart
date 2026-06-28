@@ -71,12 +71,26 @@ class _DashboardPageState extends State<DashboardPage> {
     });
 
     ble.onDeviceInfo = (info) {
-      setState(() {
+      if (mounted) {
+        debugPrint("DASH PAGE: onDeviceInfo, mounted");
+        setState(() {
         session.state = session.state.copyWith(
           batteryPercent: info.battery,
           firmware: info.firmware
         );
       });
+      }
+    };
+
+    ble.onDeviceSettings = (settings) {
+      if (mounted) {
+        debugPrint("DASH PAGE: onDeviceSettings, mounted");
+        setState(() {
+          session.state = session.state.copyWith(
+            settings: settings
+          );
+        });
+      }
     };
 
     ble.onSlotList = (slots) {
@@ -196,30 +210,42 @@ class _DashboardPageState extends State<DashboardPage> {
         padding: const EdgeInsets.all(16),
         color: Theme.of(context).colorScheme.surfaceContainerLowest,
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            DeviceInfoCard(state: session.state),
-            const SizedBox(height: 16),
-            DeviceActionsPanel(
-              activeSlot: session.state.activeSlot,
-              onConnect: session.state.canConnect
-                ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
-                : null,
-              onDisconnect: session.state.canDisconnect
-                ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
-                : null,
-              onDownload: session.state.canDownload
-                ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
-                : null,
-              onUpload: session.state.canTransfer
-                ? _uploadImage
-                : null,
-              onSlotChanged: (slot) {
-                updateSession((s) => s.copyWith(activeSlot: slot));
-              },
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DeviceInfoCard(state: session.state),
+                    const SizedBox(height: 16),
+                    DeviceActionsPanel(
+                      activeSlot: session.state.activeSlot,
+                      settings: session.state.settings,
+                      onConnect: session.state.canConnect
+                        ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
+                        : null,
+                      onDisconnect: session.state.canDisconnect
+                        ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
+                        : null,
+                      onDownload: session.state.canDownload
+                        ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
+                        : null,
+                      onUpload: session.state.canTransfer
+                        ? _uploadImage
+                        : null,
+                      onSlotChanged: (slot) {
+                        updateSession((s) => s.copyWith(activeSlot: slot));
+                      },
+                      onSettingsChanged: (settings) async {
+                        await ble.setDeviceSettings(settings);
+                      },
+                    )
+                  ],
+                ),
+              )
             )
           ],
-        ),
+        )
       ),
     );
   }

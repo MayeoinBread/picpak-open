@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:picpak_open/app/data/models/device_settings.dart';
 import 'package:picpak_open/app/services/device_session_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/transport/ble_session.dart';
@@ -29,6 +30,8 @@ class BleManager {
   Function(DeviceInfo info)? onDeviceInfo;
 
   Function(List<int> slots)? onSlotList;
+
+  Function(DeviceSettings settings)? onDeviceSettings;
 
   Function(int slot)? onDeleteAck;
 
@@ -153,6 +156,10 @@ class BleManager {
       case 0x02:
         _handleReadPacket(data);
         break;
+      case 0x07:
+        // debugPrint("Device Settings: ${data.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ')}");
+        _parseDeviceSettings(data);
+        break;
       case 0x08:
         _parseDeviceInfo(data);
         break;
@@ -164,6 +171,9 @@ class BleManager {
         break;
       case 0x04:
         _parseSlotHash(data);
+        break;
+      default:
+        debugPrint("Unknown opcode: $opcode (Data: $data)");
     }
   }
 
@@ -214,6 +224,14 @@ class BleManager {
 
   Future<void> requestDeviceInfo() async {
     await ff02!.write([0xAA, 0x08, 0x02, 0xFF]);
+  }
+
+  Future<void> requestDeviceSettings() async {
+    await ff02!.write([0xAA, 0x07, 0x02, 0xFF]);
+  }
+
+  Future<void> setDeviceSettings(DeviceSettings settings) async {
+    await ff02!.write(settings.encodeSettings());
   }
 
   Future<void> imageList() async {
@@ -354,6 +372,18 @@ class BleManager {
     final slot = (hi << 8) | lo;
 
     onDeleteAck?.call(slot);
+  }
+
+  void _parseDeviceSettings(List<int> data) {
+    if (data.length < 8) return;
+    if (data[2] != 0x01) return;
+
+    final deviceSettings = DeviceSettings.decodeSettings(data);
+
+    debugPrint("Refresh duration: ${deviceSettings.seconds} s");
+    debugPrint("Accelerometer enabled: ${deviceSettings.accelerometer}");
+
+    onDeviceSettings?.call(deviceSettings);
   }
 
   void _parseSlotHash(List<int> data) {

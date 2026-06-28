@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:picpak_open/app/data/models/device_settings.dart';
 
 enum ConnectionState {
   disconnected,
@@ -27,6 +28,8 @@ class DeviceSessionState {
   final int batteryPercent;
   final String firmware;
 
+  final DeviceSettings settings;
+
   const DeviceSessionState({
     required this.connection,
     required this.transfer,
@@ -35,6 +38,7 @@ class DeviceSessionState {
     required this.batteryPercent,
     required this.firmware,
     required this.availableSlots,
+    required this.settings,
     this.activeSlot
   });
 
@@ -79,7 +83,8 @@ class DeviceSessionState {
     List<int>? availableSlots,
     String? deviceName,
     int? batteryPercent,
-    String? firmware
+    String? firmware,
+    DeviceSettings? settings
   }) {
     return DeviceSessionState(
       connection: connection ?? this.connection,
@@ -89,7 +94,8 @@ class DeviceSessionState {
       availableSlots: availableSlots ?? this.availableSlots,
       deviceName: deviceName ?? this.deviceName,
       batteryPercent: batteryPercent ?? this.batteryPercent,
-      firmware: firmware ?? this.firmware
+      firmware: firmware ?? this.firmware,
+      settings: settings ?? this.settings
     );
   }
 }

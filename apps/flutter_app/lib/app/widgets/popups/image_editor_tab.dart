@@ -4,9 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:picpak_open/app/data/models/editor_result.dart';
 import 'package:picpak_open/app/repositories/image_repository.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
-import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
-import 'package:picpak_open/app/widgets/controls/crop_controls.dart';
 import 'package:picpak_open/app/widgets/controls/dithering_controls.dart';
 import 'package:picpak_open/app/widgets/controls/filter_options_controls.dart';
 import 'package:picpak_open/app/widgets/controls/image_adjustment_controls.dart';
@@ -216,6 +214,7 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
                             icon: const Icon(Icons.crop),
                             tooltip: 'Crop',
                             onPressed: () async {
+                              if (_originalImageBytes == null) return;
                               final rect = await showDialog<Rect>(
                                 context: context,
                                 builder: (_) => CropDialog(

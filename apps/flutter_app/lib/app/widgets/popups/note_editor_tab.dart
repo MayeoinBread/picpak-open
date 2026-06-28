@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:picpak_open/app/data/models/editor_result.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
-import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/widgets/common/image_preview_panel.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'package:picpak_open/app/widgets/library/slot_metadata.dart';

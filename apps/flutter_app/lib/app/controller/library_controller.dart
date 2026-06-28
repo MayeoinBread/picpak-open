@@ -4,7 +4,6 @@ import 'package:picpak_core/picpak_core.dart';
 import 'package:picpak_open/app/repositories/image_repository.dart';
 import 'package:picpak_open/app/repositories/slot_repository.dart';
 import 'package:picpak_open/app/services/device_session_service.dart';
-import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
@@ -108,20 +107,24 @@ class LibraryController extends ChangeNotifier {
     );
   }
 
-  Future<void> pushToDevice({
+  Future<String> pushToDevice({
     required BleManager ble,
     required DeviceSessionService session
   }) async {
     final dirtySlots = await getPendingItems();
 
+    List<int> updates = [0, 0, 0];
+
     for (final dirtySlot in dirtySlots) {
       final slot = dirtySlot.slot;
 
       if (dirtySlot.metadata.pendingAction == SlotPendingAction.delete) {
+        // TODO see what we get back for a Hash if an image doesn't exist/is deleted so we can check properly
         await ble.deleteImage(slot);
         await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: SlotMetadataDefaults.empty(slot));
         items[slot] = items[slot]!.copyWith(exists: false, thumbnailBytes: null, metadata: SlotMetadataDefaults.empty(slot));
         notifyListeners();
+        updates[0] += 1;
       } else if (dirtySlot.metadata.pendingAction == SlotPendingAction.upload) {
 
         final slotType = dirtySlot.metadata.type;
@@ -217,14 +220,19 @@ class LibraryController extends ChangeNotifier {
           await SlotRepository().saveSlot(slot: slot, imageId: imageId, metadata: updatedMetadata);
           final current = items[slot]!;
           items[slot] = current.copyWith(metadata: updatedMetadata);
+          updates[1] += 1;
         } else {
           debugPrint("Uploaded hash does not match expected");
+          updates[2] += 1;
         }
         notifyListeners();
 
         await Future.delayed(const Duration(milliseconds: 100));
       }
+
     }
+
+    return "Updated: ${updates[1]} - Failed: ${updates[2]} - Deleted: ${updates[0]}";
   }
 
   void updateMetadata(int slot, SlotMetadata metadata) {

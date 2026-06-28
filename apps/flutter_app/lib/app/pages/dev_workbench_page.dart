@@ -10,7 +10,6 @@ import 'package:picpak_open/app/widgets/controls/filter_controls.dart';
 import 'package:picpak_open/app/widgets/controls/filter_options_controls.dart';
 import 'package:picpak_open/app/widgets/controls/image_adjustment_controls.dart';
 import 'package:picpak_open/app/widgets/controls/palette_bias_controls.dart';
-import 'package:picpak_protocol/picpak_protocol.dart';
 
 class DevWorkbenchPage extends StatefulWidget {
   const DevWorkbenchPage({super.key});
@@ -29,7 +28,7 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
   PaletteFramebuffer? _framebuffer;
 
   DitherMode _ditherMode = DitherMode.floydSteinberg;
-  FitStrategy _fitStrategy = FitStrategy.crop;
+  final FitStrategy _fitStrategy = FitStrategy.crop;
   SwatchType _swatchType = SwatchType.noise;
 
   ImageAdjustments _adjustments = ImageAdjustments();
@@ -41,7 +40,6 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
   bool _simulateDevice = false;
 
   int _processToken = 0;
-  bool _processing = false;
 
   late StreamSubscription sub;
 
@@ -82,8 +80,6 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
 
     final token = ++_processToken;
 
-    setState(() => _processing = true);
-
     await Future.delayed(Duration.zero);
 
     final result = await compute(
@@ -106,7 +102,6 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
     setState(() {
       _framebuffer = result.framebuffer;
       _processedImage = result.previewBytes;
-      _processing = false;
     });
   }
 

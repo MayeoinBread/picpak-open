@@ -33,7 +33,10 @@ class DeviceInfoCard extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text('Firmware: ${state.firmware}'),
-            Text('Battery: ${state.batteryPercent}%')
+            Text('Battery: ${state.batteryPercent}%'),
+            const SizedBox(height: 16),
+            Text('Image Refresh Period: ${state.settings.seconds}s'),
+            Text('Accelerometer Enabled: ${state.settings.accelerometer}')
           ],
         )
       )
