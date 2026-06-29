@@ -89,6 +89,11 @@ class _ImageEditorTabState extends State<ImageEditorTab> {
   }
 
   Future<void> _pickImage() async {
+    // final result = await FilePicker.platform.pickFiles(
+    // final result = await filePicker
+    //   type: FileType.image,
+    //   withData: true
+    // );
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       withData: true

@@ -145,11 +145,6 @@ class _DevWorkbenchPageState extends State<DevWorkbenchPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PicPak Image Pipeline'),
-        actions: [
-        ]
-      ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Row (
