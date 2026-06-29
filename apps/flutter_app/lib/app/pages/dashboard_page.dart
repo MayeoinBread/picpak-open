@@ -175,131 +175,117 @@ class _DashboardPageState extends State<DashboardPage> {
 
   List<Widget> _buildDesktopLayout(BuildContext context) {
     return [
-      _leftPanel(context),
+      SizedBox(width: 300, child: _leftPanel(context)),
       _centerPanel(context),
-      _rightPanel(context)
+      SizedBox(width: 340, child: _rightPanel(context))
     ];
   }
 
-  List<Widget> _buildMobileLayout(BuildContext context) {
-    return [
-      Expanded(child: _centerPanel(context)),
-      SizedBox(height:300, child: _leftPanel(context)),
-      SizedBox(height: 400, child: _rightPanel(context))
-    ];
+  Widget _buildMobileLayout(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _leftPanel(context),
+          _centerPanel(context),
+          _rightPanel(context)
+        ],
+      )
+    );
   }
 
   Widget _leftPanel(BuildContext context) {
-    return SizedBox(
-      width: 300,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            DeviceInfoCard(state: session.state),
-            const SizedBox(height: 16),
-            DeviceActionsPanel(
-              activeSlot: session.state.activeSlot,
-              onConnect: session.state.canConnect
-                ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
-                : null,
-              onDisconnect: session.state.canDisconnect
-                ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
-                : null,
-              onDownload: session.state.canDownload
-                ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
-                : null,
-              onUpload: session.state.canTransfer
-                ? _uploadImage
-                : null,
-              onSlotChanged: (slot) {
-                updateSession((s) => s.copyWith(activeSlot: slot));
-              },
-            )
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          DeviceInfoCard(state: session.state),
+          const SizedBox(height: 16),
+          DeviceActionsPanel(
+            activeSlot: session.state.activeSlot,
+            onConnect: session.state.canConnect
+              ? () => DashboardActions.connect(ble: ble, updateSession: updateSession)
+              : null,
+            onDisconnect: session.state.canDisconnect
+              ? () => DashboardActions.disconnect(ble: ble, updateSession: updateSession)
+              : null,
+            onDownload: session.state.canDownload
+              ? () => DashboardActions.downloadSlot(ble: ble, slot: session.state.activeSlot!, updateSession: updateSession)
+              : null,
+            onUpload: session.state.canTransfer
+              ? _uploadImage
+              : null,
+            onSlotChanged: (slot) {
+              updateSession((s) => s.copyWith(activeSlot: slot));
+            },
+          )
+        ],
       ),
     );
   }
 
   Widget _centerPanel(BuildContext context) {
-    return Expanded(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            ImagePreviewPanel(
-              title: 'Original',
-              height: DeviceConstants.imageHeight,
-              imageBytes: _originalImageBytes
-            ),
-            const SizedBox(height: 16),
-            ImagePreviewPanel(
-              title: 'Preview',
-              height: DeviceConstants.imageHeight,
-              imageBytes: pipeline.previewBytes
-            )
-          ]
+    return Column(
+      children: [
+        ImagePreviewPanel(
+          title: 'Original',
+          height: DeviceConstants.imageHeight,
+          imageBytes: _originalImageBytes
+        ),
+        const SizedBox(height: 16),
+        ImagePreviewPanel(
+          title: 'Preview',
+          height: DeviceConstants.imageHeight,
+          imageBytes: pipeline.previewBytes
         )
-      )
+      ]
     );
   }
 
   Widget _rightPanel(BuildContext context) {
-    return SizedBox(
-      width: 340,
-      child: Container(
-        color: Theme.of(context).colorScheme.surfaceContainerLowest,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(8),
-                child: Column(
-                  children: [
-                    ElevatedButton(
-                      onPressed: _pickImage,
-                      child: const Text('Import Image')
-                    ),
-                    const SizedBox(height: 8),
-                    DitheringControls(
-                      selectedAlgorithm: algorithm,
-                      onAlgorithmChanged: (newAlg) async {
-                        setState(() {
-                          algorithm = newAlg;
-                        });
-                        _reprocess();
-                      }
-                    ),
-                    const SizedBox(height: 8),
-                    ImageAdjustmentControls(
-                      adjustments: adjustments,
-                      onChanged: (newAdjustments) async {
-                        setState(() {
-                          adjustments = newAdjustments;
-                        });
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerLowest,
+      child: Column(
+        children: [
+          ElevatedButton(
+            onPressed: _pickImage,
+            child: const Text('Import Image')
+          ),
+          const SizedBox(height: 8),
+          DitheringControls(
+            selectedAlgorithm: algorithm,
+            onAlgorithmChanged: (newAlg) async {
+              setState(() {
+                algorithm = newAlg;
+              });
+              _reprocess();
+            }
+          ),
+          const SizedBox(height: 8),
+          ImageAdjustmentControls(
+            adjustments: adjustments,
+            onChanged: (newAdjustments) async {
+              setState(() {
+                adjustments = newAdjustments;
+              });
 
-                        _reprocess();
-                      }
-                    ),
-                    const SizedBox(height: 8),
-                    FilterControls(
-                      selectedFilter: _filter,
-                      onFilterChanged: (filter) async {
-                        setState(() {
-                          _filter = filter;
-                        });
-                        _reprocess();
-                      }
-                    )
-                  ]
-                )
-              )
-            ),
-          ],
-        )
+              _reprocess();
+            }
+          ),
+          const SizedBox(height: 8),
+          FilterControls(
+            selectedFilter: _filter,
+            onFilterChanged: (filter) async {
+              setState(() {
+                _filter = filter;
+              });
+              _reprocess();
+            }
+          )
+        ]
       )
     );
   }
@@ -308,19 +294,9 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 700;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('PicPak Open')
-      ),
-
-      body: Column(
-        children: [
-          Expanded(
-            child: isMobile
-              ? Column(children: _buildMobileLayout(context))
+      body:  isMobile
+              ? _buildMobileLayout(context)
               : Row(children: _buildDesktopLayout(context))
-          ),
-        ],
-      )
     );
   }
 }

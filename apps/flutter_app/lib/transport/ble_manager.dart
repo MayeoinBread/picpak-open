@@ -6,7 +6,8 @@ import 'package:picpak_open/app/services/device_session_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
 import 'package:picpak_open/transport/ble_session.dart';
 import 'package:picpak_open/transport/device_info.dart';
-import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
+// import 'package:flutter_blue_plus_windows/flutter_blue_plus_windows.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:picpak_protocol/picpak_protocol.dart';
 import 'package:picpak_image/picpak_image.dart';
 
@@ -36,29 +37,36 @@ class BleManager {
 
   Function()? onUploadComplete;
 
-  Future<BluetoothDevice?> scanForDevice({
-    Duration timeout = const Duration(seconds: 5)
-  }) async {
-    BluetoothDevice? found;
+  Future<BluetoothDevice?> scanForDevice() async {
+    final completer = Completer<BluetoothDevice?>();
 
-    await FlutterBluePlusWindows.startScan(timeout: timeout);
+    late final StreamSubscription sub;
 
-    final sub = FlutterBluePlusWindows.scanResults.listen((results) {
+    sub = FlutterBluePlus.onScanResults.listen((results) {
       for (final r in results) {
-        final name = r.device.platformName.toLowerCase();
-        if (name.contains('picpak')) {
-          found = r.device;
-          break;
+        debugPrint(r.device.platformName);
+
+        if (r.device.platformName == "PicPak") {
+          sub.cancel();
+          FlutterBluePlus.stopScan();
+
+          completer.complete(r.device);
+          return;
         }
       }
     });
 
-    await Future.delayed(timeout);
+    await FlutterBluePlus.startScan(
+      timeout: const Duration(seconds: 10)
+    );
 
-    await sub.cancel();
-    await FlutterBluePlusWindows.stopScan();
-
-    return found;
+    return completer.future.timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        sub.cancel();
+        return null;
+      }
+    );
   }
 
   Future<BluetoothDevice?> scanAndConnect() async {
@@ -66,13 +74,35 @@ class BleManager {
 
     if (device == null) return null;
 
-    await connect(device);
+    // // await connect(device);
+    var sub2 = device.connectionState.listen((BluetoothConnectionState state) async {
+      if (state == BluetoothConnectionState.disconnected) {
+        // 1. typically, start a periodic timer that tries to 
+        //    reconnect, or just call connect() again right now
+        // 2. you must always re-discover services after disconnection!
+        debugPrint("${device.disconnectReason?.code} ${device.disconnectReason?.description}");
+      }
+    });
 
-    return device;
+    device.cancelWhenDisconnected(sub2, delayed: true, next: true);
+
+    try {
+      debugPrint("Connecting...");
+
+      await device.connect(license: License.nonprofit);
+
+      debugPrint("Connected");
+    } catch(e) {
+      debugPrint("Connect failed: ");
+      debugPrint("$e");
+    }
+
+    // return device;
   }
 
   Future<BluetoothDevice?> _resolveDevice(BluetoothDevice scanDevice) async {
-    final devices = FlutterBluePlusWindows.connectedDevices;
+    // final devices = FlutterBluePlusWindows.connectedDevices;
+    final devices = FlutterBluePlus.connectedDevices;
 
     try { 
       return devices.firstWhere(
@@ -112,7 +142,7 @@ class BleManager {
     // Always use THIS instance from now on
     bleSession.device = device;
 
-    await device.connect(autoConnect: false);
+    await device.connect(autoConnect: false, license: License.nonprofit);
     
     await initChannels(device);
 
@@ -368,14 +398,16 @@ class BleManager {
   }
 
   Future<String> requestSlotHash(int slot) async {
-    _slotHashCompleter = Completer<String>();
+    final completer = Completer<String>();
+    // _slotHashCompleter = Completer<String>();
+    _slotHashCompleter = completer;
 
     final lo = slot & 0xFF;
     final hi = (slot >> 8) & 0xFF;
 
     await ff01!.write([0xAA, 0x04, lo, hi, 0x02, 0xFF]);
 
-    return _slotHashCompleter!.future;
+    return completer.future;
   }
 }
 
