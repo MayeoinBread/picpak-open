@@ -4,12 +4,12 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:picpak_open/app/controller/library_controller.dart';
 import 'package:picpak_open/app/repositories/image_repository.dart';
-import 'package:picpak_open/app/repositories/slot_repository.dart';
 import 'package:picpak_open/app/services/ble_service.dart';
 import 'package:picpak_open/app/services/device_session_service.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
 import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
+import 'package:picpak_open/app/widgets/library/album_selector.dart';
 import 'package:picpak_open/app/widgets/library/library_grid.dart';
 import 'package:picpak_open/app/widgets/library/slot_inspector.dart';
 import 'package:picpak_open/app/widgets/library/slot_metadata.dart';
@@ -48,9 +48,11 @@ class _LibraryPageState extends State<LibraryPage> {
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      controller.loadFromDatabase();
-    });
+    controller.init();
+
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   controller.loadFromDatabase();
+    // });
   }
 
   @override
@@ -79,17 +81,7 @@ class _LibraryPageState extends State<LibraryPage> {
       }
     );
 
-    final repo = SlotRepository();
-    for (final entry in controller.items.entries) {
-      final slot = entry.key;
-      final item = entry.value;
-
-      await repo.saveSlot(
-        slot: slot,
-        imageId: item.metadata.imageId,
-        metadata: item.metadata
-      );
-    }
+    controller.commitAllSlots();
   }
 
   Future<void> _onEdit(int slot) async {
@@ -132,11 +124,7 @@ class _LibraryPageState extends State<LibraryPage> {
             metadata: newMetadata
           );
 
-          await SlotRepository().saveSlot(
-            slot: slot,
-            imageId: image.id,
-            metadata: newMetadata
-          );
+          controller.commitSlot(mslot);
         }
       )
     );
@@ -156,10 +144,74 @@ class _LibraryPageState extends State<LibraryPage> {
 
     controller.updateMetadata(slot, updatedMetadata);
 
-    await SlotRepository().saveSlot(
-      slot: slot,
-      imageId: metadata.imageId,
-      metadata: updatedMetadata,
+    controller.commitSlot(slot);
+  }
+
+  Widget _buildLibrary(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              AlbumSelector(
+                albums: controller.albums,
+                currentAlbum: controller.currentAlbum!,
+                onAlbumSelected: controller.onAlbumSelected,
+                onCreateAlbum: controller.onCreateAlbum,
+                onRenameAlbum: controller.onRenameAlbum,
+                onDeleteAlbum: controller.onDeleteAlbum
+              ),
+              SlotInspector(
+                onSync: _sync,
+                item: selectedSlot == null
+                  ? null
+                  : controller.items[selectedSlot!]
+              ),
+              ElevatedButton(
+                onPressed: (() async {
+                  final updateMessage = await controller.pushToDevice(ble: ble, session: session);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(updateMessage))
+                    );
+                  }
+                }),
+                child: const Text("Push Updates")
+              ),
+              ElevatedButton(
+                onPressed: (() async {
+                  final deleted = await ImageRepository().cleanupUnusedImages();
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Deleted $deleted unused images'))
+                    );
+                  }
+                }),
+                child: const Text("Cleanup Storage")
+              ),
+            ],
+          ),
+        ),
+
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: LibraryGrid(
+              items: controller.items,
+              selectedSlot: selectedSlot,
+              onSelected: (slot) {
+                setState(() {
+                  selectedSlot = slot;
+                });
+              },
+              onEdit: _onEdit,
+              onDelete: _onDelete,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -168,63 +220,12 @@ class _LibraryPageState extends State<LibraryPage> {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
-        return Row(
-          children: [
-            SizedBox(
-              width: 300,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  SlotInspector(
-                    onSync: _sync,
-                    item: selectedSlot == null
-                      ? null
-                      : controller.items[selectedSlot!]
-                  ),
-                  ElevatedButton(
-                    onPressed: (() async {
-                      final updateMessage = await controller.pushToDevice(ble: ble, session: session);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(updateMessage))
-                        );
-                      }
-                    }),
-                    child: const Text("Push Updates")
-                  ),
-                  ElevatedButton(
-                    onPressed: (() async {
-                      final deleted = await ImageRepository().cleanupUnusedImages();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Deleted $deleted unused images'))
-                        );
-                      }
-                    }),
-                    child: const Text("Cleanup Storage")
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: LibraryGrid(
-                  items: controller.items,
-                  selectedSlot: selectedSlot,
-                  onSelected: (slot) {
-                    setState(() {
-                      selectedSlot = slot;
-                    });
-                  },
-                  onEdit: _onEdit,
-                  onDelete: _onDelete,
-                ),
-              ),
-            ),
-          ],
-        );
+        if (!controller.initialised) {
+          return const Center(
+            child: CircularProgressIndicator()
+          );
+        }
+        return _buildLibrary(context);
       },
     );
   }

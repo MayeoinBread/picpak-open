@@ -10,6 +10,7 @@ class SlotRepository {
   final db = DatabaseService.instance;
 
   Future<void> saveSlot({
+    required String albumId,
     required int slot,
     required String? imageId,
     required SlotMetadata metadata
@@ -22,15 +23,22 @@ class SlotRepository {
         'image_id': imageId,
         'metadata_json': jsonEncode(metadata.toJson())
       },
-      where: 'slot = ?',
-      whereArgs: [slot]
+      where: 'album_id = ? AND slot = ?',
+      whereArgs: [albumId, slot]
     );
   }
 
-  Future<Map<int, LibraryItem>> loadLibrary() async {
+  Future<Map<int, LibraryItem>> loadLibrary({
+    required String albumId
+  }) async {
     final database = await db.database;
 
-    final slotRows = await database.query('slots', orderBy: 'slot');
+    final slotRows = await database.query(
+      'slots',
+      where: 'album_id = ?',
+      whereArgs: [albumId],
+      orderBy: 'slot'
+    );
 
     final items = <int, LibraryItem>{};
 

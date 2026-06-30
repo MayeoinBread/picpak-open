@@ -1,6 +1,7 @@
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:picpak_core/picpak_core.dart';
+import 'package:picpak_open/app/repositories/album_repository.dart';
 import 'package:picpak_open/app/repositories/image_repository.dart';
 import 'package:picpak_open/app/repositories/slot_repository.dart';
 import 'package:picpak_open/app/services/device_session_service.dart';
@@ -14,24 +15,35 @@ import 'package:picpak_protocol/picpak_protocol.dart';
 class LibraryController extends ChangeNotifier {
 
   final SlotRepository repository = SlotRepository();
+  final AlbumRepository albumRepository = AlbumRepository();
 
   Map<int, LibraryItem> items = {};
+
+  List<Album> albums = [];
 
   double progress = 0;
 
   bool syncing = false;
 
-  void initialise(int slotCount) {
-    items.clear();
+  Album? currentAlbum;
 
-    for (int i = 1; i <= slotCount; i++) {
-      items[i] = LibraryItem(
-          slot: i,
-          exists: false,
-          thumbnailBytes: null,
-          metadata: SlotMetadata(type: SlotContentType.empty)
-        );
-    }
+  bool _initialised = false;
+
+  bool get initialised => _initialised;
+
+  Future<void> init() async {
+    albums.clear();
+
+    albums = await albumRepository.getAlbums();
+    currentAlbum = albums.isNotEmpty
+      ? albums.first
+      : null;
+    
+    if (currentAlbum == null) return;
+
+    await loadFromDatabase();
+
+    _initialised = true;
 
     notifyListeners();
   }
@@ -52,8 +64,76 @@ class LibraryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void commitSlot(int slot) async {
+    final item = items[slot];
+    if (item == null) return;
+
+    await repository.saveSlot(
+      albumId: currentAlbum!.id,
+      slot: slot,
+      imageId: item.metadata.imageId,
+      metadata: item.metadata
+    );
+  }
+
+  void commitAllSlots() async {
+    for (final entry in items.entries)
+    {
+      final slot = entry.key;
+      commitSlot(slot);
+    }
+  }
+
+  Future<void> setCurrentAlbum(Album newAlbum, bool isRename) async {
+    if (currentAlbum == null || isRename) {
+      currentAlbum = newAlbum;
+    } else if(newAlbum.id == currentAlbum!.id){
+      return;
+    }
+
+    currentAlbum = newAlbum;
+
+    await loadFromDatabase();
+  }
+
+  void onAlbumSelected(String id) async {
+    final selectedAlbum = await albumRepository.getAlbumById(id);
+    await setCurrentAlbum(selectedAlbum, false);
+  }
+
+  Future<void> onCreateAlbum(String name) async {
+    final newAlbumId = await albumRepository.createAlbum(name);
+    albums = await albumRepository.getAlbums();
+    final newAlbum = await albumRepository.getAlbumById(newAlbumId);
+    await setCurrentAlbum(newAlbum, false);
+
+    notifyListeners();
+  }
+  
+  Future<void> onRenameAlbum(String albumId, String newName) async {
+    await albumRepository.renameAlbum(albumId, newName);
+    albums = await albumRepository.getAlbums();
+    final renamedAlbum = await albumRepository.getAlbumById(albumId);
+    await setCurrentAlbum(renamedAlbum, true);
+    notifyListeners();
+  }
+  
+  Future<void> onDeleteAlbum(String albumId) async {
+    await albumRepository.deleteAlbum(albumId);
+
+    albums = await albumRepository.getAlbums();
+
+    if (currentAlbum!.id == albumId) {
+      await setCurrentAlbum(albums.first, false);
+    }
+
+    notifyListeners();
+  }
+
   Future<void> loadFromDatabase() async {
-    items = await repository.loadLibrary();
+    if (currentAlbum == null) return;
+
+    items = await repository.loadLibrary(albumId: currentAlbum!.id);
 
     notifyListeners();
   }
@@ -121,7 +201,7 @@ class LibraryController extends ChangeNotifier {
       if (dirtySlot.metadata.pendingAction == SlotPendingAction.delete) {
         // TODO see what we get back for a Hash if an image doesn't exist/is deleted so we can check properly
         await ble.deleteImage(slot);
-        await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: SlotMetadataDefaults.empty(slot));
+        await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: SlotMetadataDefaults.empty(slot), albumId: currentAlbum!.id);
         items[slot] = items[slot]!.copyWith(exists: false, thumbnailBytes: null, metadata: SlotMetadataDefaults.empty(slot));
         notifyListeners();
         updates[0] += 1;
@@ -202,7 +282,7 @@ class LibraryController extends ChangeNotifier {
 
           case SlotContentType.empty:
             await ble.deleteImage(slot);
-            await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: SlotMetadataDefaults.empty(slot));
+            await SlotRepository().saveSlot(slot: slot, imageId: null, metadata: SlotMetadataDefaults.empty(slot), albumId: currentAlbum!.id);
             continue;
         }
 
@@ -217,7 +297,7 @@ class LibraryController extends ChangeNotifier {
 
         if (deviceHash == appHash) {
           final updatedMetadata = dirtySlot.metadata.copyWith(syncState: SlotSyncState.clean, pendingAction: SlotPendingAction.none);
-          await SlotRepository().saveSlot(slot: slot, imageId: imageId, metadata: updatedMetadata);
+          await SlotRepository().saveSlot(slot: slot, imageId: imageId, metadata: updatedMetadata, albumId: currentAlbum!.id);
           final current = items[slot]!;
           items[slot] = current.copyWith(metadata: updatedMetadata);
           updates[1] += 1;
