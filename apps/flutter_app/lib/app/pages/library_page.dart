@@ -10,7 +10,6 @@ import 'package:picpak_open/app/services/device_session_service.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
 import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
-import 'package:picpak_open/app/widgets/library/album_selector.dart';
 import 'package:picpak_open/app/widgets/library/library_grid.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'package:picpak_open/app/widgets/library/slot_inspector.dart';
@@ -133,6 +132,12 @@ class _LibraryPageState extends State<LibraryPage> {
   Future<void> _handleEditorResult(int slot, LibraryItem item, EditorResult editorResult) async {
     final previewMd5 = md5.convert(editorResult.packedBytes).toString();
 
+    if (item.exists) {
+      final existingImage = await ImageRepository().getImage(item.metadata.imageId!);
+      if (previewMd5 == existingImage?.deviceHash){
+        return;
+      }
+    }
     if (item.exists) {
       final existingImage = await ImageRepository().getImage(item.metadata.imageId!);
       if (previewMd5 == existingImage?.deviceHash){

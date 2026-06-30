@@ -194,7 +194,7 @@ class _DashboardPageState extends State<DashboardPage> {
       SizedBox(width: 340, child: _rightPanel(context))
     ];
   }
-
+  
   Widget _buildMobileLayout(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8),
