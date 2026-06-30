@@ -99,6 +99,8 @@ class LibraryController extends ChangeNotifier {
   void onAlbumSelected(String id) async {
     final selectedAlbum = await albumRepository.getAlbumById(id);
     await setCurrentAlbum(selectedAlbum, false);
+
+    notifyListeners();
   }
 
   Future<void> onCreateAlbum(String name) async {
@@ -115,6 +117,7 @@ class LibraryController extends ChangeNotifier {
     albums = await albumRepository.getAlbums();
     final renamedAlbum = await albumRepository.getAlbumById(albumId);
     await setCurrentAlbum(renamedAlbum, true);
+    
     notifyListeners();
   }
   

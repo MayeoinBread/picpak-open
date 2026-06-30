@@ -10,6 +10,7 @@ import 'package:picpak_open/app/services/device_session_service.dart';
 import 'package:picpak_open/app/services/image_pipeline_controller.dart';
 import 'package:picpak_open/app/services/thumbnail_service.dart';
 import 'package:picpak_open/app/state/device_session_state.dart';
+import 'package:picpak_open/app/widgets/library/album_selector.dart';
 import 'package:picpak_open/app/widgets/library/library_grid.dart';
 import 'package:picpak_open/app/widgets/library/library_item.dart';
 import 'package:picpak_open/app/widgets/library/slot_inspector.dart';
@@ -203,6 +204,14 @@ class _LibraryPageState extends State<LibraryPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
+          AlbumSelector(
+            albums: controller.albums,
+            currentAlbum: controller.currentAlbum!,
+            onAlbumSelected: controller.onAlbumSelected,
+            onCreateAlbum: controller.onCreateAlbum,
+            onRenameAlbum: controller.onRenameAlbum,
+            onDeleteAlbum: controller.onDeleteAlbum
+          ),
           SlotInspector(item: selectedSlot == null ? null : controller.items[selectedSlot], onSync: _sync),
           ElevatedButton(onPressed: () async {await controller.pushToDevice(ble: ble, session: session);}, child: const Text('Push Updates')),
           ElevatedButton(
@@ -273,6 +282,11 @@ class _LibraryPageState extends State<LibraryPage> {
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
+        if (!controller.initialised) {
+          return const Center(
+            child: CircularProgressIndicator()
+          );
+        }
         return isMobile
           ? _buildMobileLayout(context)
           : Scaffold(

@@ -4,7 +4,7 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
     <application
-        android:label="flutter_app"
+        android:label="PicPak-Open"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
